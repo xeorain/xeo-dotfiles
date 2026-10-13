@@ -1,0 +1,97 @@
+#!/bin/bash
+# SPDX-License-Identifier: MIT
+#
+# Copyright (c) 2026 Jerry Xeo
+#
+# A xeo utlity script that switches between dark and light background styles for
+# Vim/Neovim.
+
+[[ "${BASH_SOURCE[0]}" == "$0" ]] || exit
+
+[[ -n "${XEO_SH_EXTRA_ENV_FILE}" && -f "${XEO_SH_EXTRA_ENV_FILE}" ]] || return
+
+PROGNAME="$(basename -- "$0")"
+readonly PROGNAME
+
+say() {
+  printf '\e[1m%s:\e[0m %b\n' "${PROGNAME}" "$1"
+}
+
+say_err() {
+  printf '\e[1m%s:\e[0m \e[31merror:\e[0m %b\n' "${PROGNAME}" "$1" >&2
+}
+
+on_exit() {
+  local _state=$?
+  if [[ -n "${old_tty_state:-}" ]]; then
+    stty "${old_tty_state}"
+    printf '\n'
+  fi
+  exit ${_state}
+}
+
+# HACK: A workaround for invoking this script with a bash key binding.
+#
+# In an interactive shell session, Bash uses the GNU Readline library for line
+# editing. When you are typing in a terminal, Bash works as follows:
+#
+# * Bash (Readline) switches the terminal to raw mode where the terminal can see
+#   every single key you press in real time.
+# * When you finish typing a command and press Enter, Bash temporarily sets the
+#   terminal back to the standard cooked (sane) mode, allowing the command to
+#   read user input from the terminal.
+# * After the command completes, Bash switches the terminal back to raw mode,
+#   starting a new command-line prompt.
+#
+# However, when a command to execute is triggered by a keyboard shortcut defined
+# with `bind -x`, Bash directly pauses the line editor and runs the command
+# without resetting the terminal to sane mode, so the running command is not
+# able to read user input from the terminal.
+#
+# To work around this limitation, we manually set the terminal to sane mode,
+# thus allowing the `read` command to get user input, and then restore the
+# original terminal state right after the read finishes.
+#
+# What's interesting is that Zsh doesn't seem to suffer from the same issue. Is
+# this true? When Zsh is going to execute a command triggered by a key binding
+# defined with `bindkey -s`, its line editor (ZLE) inserts each character of the
+# bound command into the command line as if you were typing in the command by
+# hand, and Zsh will set the terminal to sane mode right before executing the
+# command. However, when a key binding triggers a ZLE widget, Zsh won't reset
+# the terminal mode before executing the widget, keeping the line editor active
+# while the widget is running, which will cause exactly the same issue as in
+# Bash.
+main() {
+  old_tty_state="$(stty -g)"
+  stty sane
+
+  local _bg _choice
+  printf 'Choose \e[1md\e[0mark or \e[1ml\e[0might background? (d/l): '
+  read -r _choice
+  stty "${old_tty_state}" && unset old_tty_state
+
+  case "${_choice:-}" in
+    d)
+      _bg='dark'
+      ;;
+    l)
+      _bg='light'
+      ;;
+    '')
+      exit 0
+      ;;
+    *)
+      say_err "invalid choice -- '${_choice}'\n" >&2
+      exit 1
+      ;;
+  esac
+
+  sed -i "s/^export XEO_VIM_BACKGROUND=.*$/export XEO_VIM_BACKGROUND='${_bg}'/" \
+      "${XEO_SH_EXTRA_ENV_FILE}"
+}
+
+trap 'on_exit' EXIT
+trap 'exit 130' INT
+
+# shellcheck disable=SC1090
+main "$@" && source "${XEO_SH_EXTRA_ENV_FILE}"

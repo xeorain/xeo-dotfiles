@@ -1,0 +1,82 @@
+#!/bin/bash
+# SPDX-License-Identifier: MIT
+#
+# Copyright (c) 2026 Jerry Xeo
+#
+# Start two wl-paste processes in which one writes the new clipboard data into
+# the cliphist database, and the other signals the status bar to update the
+# number the history entries shown in the clipboard block.
+#
+# Usage: clipboard-watcher [-l|--lock] <BAR_COMMAND>
+#
+# Options:
+#   -l, --lock  Use a lock file to ensure singleton. Do not use it when running
+#               this script as a systemd service.
+#
+# Arguments:
+#   BAR_COMMAND  The command (including command argumentss) used to signal the
+#                status bar
+#
+# Requires:   cliphist, wl-clipboard
+
+case "$1" in
+  -l|--lock)
+    use_lockfile=1
+    shift
+    ;;
+  --*)
+    printf "invalid option -- '%s'" "${1#--}" >&2
+    exit 2
+    ;;
+  -*)
+    printf "invalid option -- '%s'" "${1#-}" >&2
+    exit 2
+    ;;
+esac
+
+cmd_bar_signal=("$@")
+
+if [ -n "${use_lockfile}" ]; then
+  lockfile="${XDG_RUNTIME_DIR}/clipboard-watcher-${EUID:-$(id -u)}-${XDG_SESSION_ID:-$(< /proc/self/sessionid)}.lock"
+  exec 9>"${lockfile}"
+  if ! flock -n 9; then
+    printf "clipboard-watcher: only a single instance is allowed" >&2
+    exit
+  fi
+fi
+
+on_exit() {
+  local _rc=$?
+  trap - EXIT INT TERM
+
+  # shellcheck disable=SC2086
+  [ -z "${pids}" ] || kill ${pids} 2>/dev/null
+  if [ -n "${lockfile}" ] && [ -f "{lockfile}" ]; then
+    exec 9>&- && rm -f "${lockfile}" || exit $?
+  fi
+
+  case "${_rc}" in
+    130)
+      kill -s SIGINT $$ 2>/dev/null
+      ;;
+    143)
+      kill -s SIGTERM $$ 2>/dev/null
+      ;;
+    *)
+      exit "${_rc}"
+  esac
+}
+
+trap 'on_exit' EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+exec wl-paste --watch cliphist store &
+pids=$!
+
+if [ ${#cmd_bar_signal[@]} -gt 0 ]; then
+  exec wl-paste --watch "${cmd_bar_signal[@]}" &
+  pids="${pids} $!"
+fi
+
+wait 2>/dev/null

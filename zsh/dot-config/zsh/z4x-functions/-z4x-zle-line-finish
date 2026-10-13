@@ -1,0 +1,33 @@
+# SPDX-License-Identifier: MIT
+#
+# Copyright (c) 2020 Roman Perepelitsa
+#
+# A ZLE widget that is intended to be hooked into zle-line-finish to override
+# the original zle-line-finish widget.
+
+local -i ret
+
+if (( ${+widgets[-z4x-orig-zle-line-finish]} )); then
+  zle -- -z4x-orig-zle-line-finish "$@" || ret=$?
+fi
+
+if [[ -v _z4x_redraw_fd ]]; then
+  zle -F $_z4x_redraw_fd
+  exec {_z4x_redraw_fd}>&-
+  unset _z4x_redraw_fd
+fi
+
+if [[ "$BUFFER" == *' ' ]] \
+    && ! zstyle -t :z4x:history preserve-trailing-whitespace \
+    && -z4x-is-valid-list "$PREBUFFER$BUFFER"; then
+  BUFFER="${BUFFER%% #}"
+fi
+
+unset POSTDISPLAY
+if [[ -v region_highlight ]]; then
+  _zsh_highlight
+fi
+
+return ret
+
+# vim:ft=zsh

@@ -1,0 +1,26 @@
+# SPDX-License-Identifier: MIT
+#
+# Copyright (c) 2020 Roman Perepelitsa
+#
+# Get the cursor coordinates in a terminal.
+
+local fd=${_z4x_tty_fd-1}
+[[ -t $fd ]] || return
+
+local resp
+IFS= builtin read -srt 5 -d R resp$'?\e[6n' <&$fd || return
+
+while [[ "$resp" != *$'\e['<->';'<-> ]]; do
+  IFS= builtin read -srt 5 -d R resp <&$fd || return
+done
+
+if (( ARGC )); then
+  local pref="${resp%$'\e['*}"
+  [[ -n "$pref" ]] && print -rz -- "$pref"
+fi
+
+resp="${resp##*'['}"
+typeset -g cursor_y="${resp%';'*}"
+typeset -g cursor_x="${resp#*';'}"
+
+# vim:ft=zsh

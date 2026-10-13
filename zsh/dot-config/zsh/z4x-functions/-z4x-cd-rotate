@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: MIT
+#
+# Copyright (c) 2020 Roman Perepelitsa
+#
+# Navigate either backward or forward through the directory history.
+
+(( ${+_z4x_dir_hist_fd} )) && -4x-update-dir-history
+
+() {
+  eval "$_z4x_opt"
+  while (( ${#dirstack} )) && ! pushd -q "$1" &>/dev/null; do
+    popd -q "$1"
+  done
+  (( ${#dirstack} ))
+} "$@" && -z4x-redraw-prompt
+
+# vim:ft=zsh

@@ -1,0 +1,23 @@
+# SPDX-License-Identifier: MIT
+#
+# Copyright (c) 2026 Jerry Xeo
+#
+# The public z4x interface used to prepara z4x itself and core plugins.
+#
+# Usage:
+#   See -z4x-help-prepare
+
+local -a all
+zparseopts -D -F -- a=all -all=all || return '_z4x_err()'
+
+if (( ${#all} )); then
+  local -a funcs
+  funcs=(${(k)functions[(I)-z4x-prepare-*]})
+  for f in $funcs; do
+    "$f" -f
+  done
+else
+  -z4x-prepare -f "$@"
+fi
+
+# vim:ft=zsh

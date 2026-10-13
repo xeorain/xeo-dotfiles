@@ -1,0 +1,18 @@
+# User configuration for lazygit.
+#
+# Copyright (c) 2026 Jerry Xeo
+
+gui:
+  timeFormat: 15 Nov 07 15:04 MST
+  authorColors:
+    "*": "blue"
+  theme:
+    selectedLineBgColor: # background for selected line
+      - reverse
+git:
+  pagers:
+    - colorArg: always
+      pager: delta --paging=never
+os:
+  editPreset: "nvim-remote"  # Change it if you don't use Neovim
+notARepository: skip

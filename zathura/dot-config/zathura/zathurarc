@@ -1,0 +1,27 @@
+# User configuration for Zathura.
+#
+# See `man 5 zathurarc` for a complete reference.
+#
+# Copyright (c) 2026 Jerry Xeo
+
+set guioptions 'sv'
+set selection-clipboard clipboard
+set selection-notification false
+set statusbar-home-tilde true
+set statusbar-page-percent true
+set database 'sqlite'
+set zoom-step 2
+set scroll-step 30
+set scroll-hstep 10
+set recolor false
+set recolor-keephue true
+set recolor-reverse-video false
+set statusbar-basename true
+set adjust-open width
+
+map b toggle_statusbar
+map r rotate rotate-cw
+map R rotate rotate-ccw
+
+# Load colorscheme
+#include current-theme.zathurarc

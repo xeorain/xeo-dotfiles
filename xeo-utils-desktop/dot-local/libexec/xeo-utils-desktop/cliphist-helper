@@ -1,0 +1,108 @@
+#!/bin/sh
+# SPDX-License-Identifier: MIT
+#
+# Copyright (c) 2026 Jerry Xeo
+#
+# Manipulate system clipboard history managed by cliphist.
+#
+# Usage: cliphist-helper <COMMAND>
+#
+# Commands:
+#   copy    Copy a selected record from clipboard history
+#   delete  Delete a selected record from the clipboard history
+#   wipe    Wipe all the clipboard history records
+#
+# Requires:   cliphist (a fork at
+# https://github.com/xeorain/cliphist/tree/feat/type-metadata), rofi (>= 2.0) or
+# rofi-wayland, wl-clipboard
+#
+# NOTE:
+# * This script requires a forked version of `cliphist` which supports a very
+#   simple data type query to help distinguish between text data and binary
+#   data. The fork exists because of the limitations in how `wl-copy` determines
+#   the MIME type of input data.
+#
+#   `wl-copy` performs MIME type inference on input data, unless a MIME type is
+#   explicitly supplied on the command line as the argument to the `--type`
+#   option. However, there are some edge cases where `wl-copy` identifies text
+#   data as a non-text MIME type. For example, a string starting with the regex
+#   pattern `^PA[-]?[0-9]{1,5}` is inferred as the application/vnd.hp-HPGL
+#   (Hewlett-Packard Graphics Language) type, resulting in the data being
+#   restored to the system clipboard. Therefore, if you attempt to pipe an
+#   history entry containing PA279CV (an ASUS display model name) from
+#   `cliphist` to `wl-copy`, you will find nothing is copied.
+#
+#   Although `wl-copy` has a `--type` option that allows specifying the MIME
+#   type for the input data, we cannot blindly use `--type text/plain` as
+#   `cliphist` supports binary data (images).
+
+#   My `cliphist` fork adds a `type` subcommand to tell whether a history entry
+#   stores text data or binary data, thus allowing us to get a relatively more
+#   accurate data type rather than relying solely on the internal type inference
+#   of `wl-copy`.
+#
+#   Relevant issues:
+#     * https://github.com/bugaevc/wl-clipboard/issues/294
+#     * https://github.com/sentriz/cliphist/pull/183
+#
+# * The `cliphist` v0.8.0 release adds a metadata field to history entries and
+#   allows using `cliphist list -fields mime <id>` to get the MIME type of a
+#   history record with identifier <id>. However, it requires a version of
+#   wl-clipboard newer than 2.3.0 which exports the `CLIPBOARD_TYPE` environment
+#   variable. Keep using this `cliphist` fork until this new feature is
+#   officially released and adopted by major Linux distros.
+#   See https://github.com/xeorain/cliphist/tree/release-v0.8.0#usage.
+
+set -u
+
+PROG="$(basename -- "$0")"
+
+# shellcheck disable=SC3043
+copy_item() {
+  local _item
+  local _item_id
+
+  _item="$(cliphist list \
+    | rofi -dmenu \
+           -p "[${PROG}] Select an item to copy" \
+           -theme-str 'listview{lines:10;fixed-height:false;}')"
+  [ -n "${_item:-}" ] || return 0
+
+  _item_id="$(printf "%s" "${_item}" | cut -f1)"
+  if [ "$(cliphist type "${_item_id}")" = 'text' ]; then
+    cliphist decode "${_item_id}" | wl-copy --type text/plain
+  else
+    cliphist decode "${_item_id}" | wl-copy
+  fi
+}
+
+delete_item() {
+  cliphist list \
+    | rofi -dmenu \
+           -p "[${PROG}] Select an item to delete" \
+           -theme-str 'listview{lines:10;fixed-height:false;}' \
+    | cliphist delete
+}
+
+wipe_history() {
+  printf 'yes\nno' \
+    | rofi -dmenu \
+           -p "[${PROG}] Wipe clipboard history (YES/no)?" \
+           -theme-str 'listview{lines:2;}' \
+    | grep -q '^yes$' && cliphist wipe
+}
+
+case "$1" in
+  copy)
+    copy_item
+    ;;
+  delete)
+    delete_item
+    ;;
+  wipe)
+    wipe_history
+    ;;
+  *)
+    exit 1
+    ;;
+esac

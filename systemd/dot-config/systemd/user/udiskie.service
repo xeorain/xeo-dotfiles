@@ -1,0 +1,11 @@
+[Unit]
+Description=udiskie automounter
+After=default.target
+
+[Service]
+ExecStart=/usr/bin/udiskie -a --no-tray --notify
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

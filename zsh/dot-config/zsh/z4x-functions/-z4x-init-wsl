@@ -1,0 +1,38 @@
+# SPDX-License-Identifier: MIT
+#
+# Copyright (c) 2020 Roman Perepelitsa
+#
+# z4x initialization for WSL (Windows Subsystem for Linux).
+
+local cmd="${commands[cmd.exe]:-/mnt/c/Windows/System32/cmd.exe}"
+[[ -x "$cmd" ]] || return
+
+case "$(</proc/version)" in
+  *Microsoft*) # WSL 1
+    typeset -gi z4x_no_flock=1
+    ;;
+  *microsoft*) # WSL 2
+    ;;
+  *)
+    return
+    ;;
+esac
+
+local lines=("${(@f)${$(cd -q -- ${cmd:h} && ./${cmd:t} /c set 2>/dev/null)//$'\r'}}")
+local keys=(${lines%%=*})
+local vals=(${lines#*=})
+typeset -grA z4x_win_env=(${keys:^vals})
+local home="$z4x_win_env[USERPROFILE]"
+
+[[ -n "$home" ]] || return
+
+if [[ "$home" != [a-zA-Z]':\'* \
+    || ( ! -d "${home::=/mnt/${(L)home[1]}/${${home:3}//\\//}}" \
+        && ! -d "${home::=${home#/mnt}}" ) ]]; then
+  home="$(command wslpath -- "$z4x_win_env[USERPROFILE]" 2>/dev/null)" || return
+  [[ -d "$home" ]] || return
+fi
+
+typeset -gr z4x_win_home="$home"
+
+# vim:ft=zsh

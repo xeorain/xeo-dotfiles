@@ -1,0 +1,16 @@
+# SPDX-License-Identifier: MIT
+#
+# Copyright (c) 2020 Roman Perepelitsa
+
+local x
+builtin printf -v x "$@"
+
+(( _z4x_can_save_restore_screen )) && x+=$'\ePtmux;'${x//$'\e'/$'\e\e'}$'\e\\'
+
+if [[ -t 1 ]]; then
+  print -rn -- "$x"
+elif [[ -v _z4x_tty_fd ]]; then
+  print -rnu $_z4x_tty_fd -- "$x"
+fi
+
+# vim:ft=zsh

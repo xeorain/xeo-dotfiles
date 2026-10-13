@@ -1,0 +1,23 @@
+# SPDX-License-Identifier: MIT
+#
+# Copyright (c) 2020 Roman Perepelitsa
+# Copyright (c) 2026 Jerry Xeo
+#
+# Prepare the powerlevel10k plugin.
+
+local pkg_dir="$ZDOTDIR/plugins/powerlevel10k"
+
+[[ -d "$pkg_dir" ]] || return
+
+[[ "$1" == ('-f'|'--force') ||
+    ! "$pkg_dir/powerlevel10k.zsh-theme.zwc" -nt "$pkg_dir/powerlevel10k.zsh-theme" ]] \
+  || return
+
+eval "$_z4x_opt"
+
+[[ -d "${XDG_CACHE_HOME:-$HOME/.cache}/zsh/powerlevel10k/p10k-root" ]] \
+  || zf_mkdir -p -- "${XDG_CACHE_HOME:-$HOME/.cache}/zsh/powerlevel10k/p10k-root" \
+  || return
+z4x compile -- "$pkg_dir"/{*.zsh-theme,internal/*.zsh,gitstatus/*.zsh,gitstatus/install}(N)
+
+# vim:ft=zsh

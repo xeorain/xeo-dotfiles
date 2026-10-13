@@ -1,0 +1,9 @@
+# User configuration for NPM
+#
+# Copyright (c) 2026 Jerry Xeo
+
+registry=https://registry.npmmirror.com/
+cache=${HOME}/.cache/npm
+logs-max=5
+
+# vim:ft=conf

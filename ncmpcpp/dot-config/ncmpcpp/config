@@ -1,0 +1,98 @@
+# User configuration for ncmpcpp suited for light background.
+#
+# See /usr/share/doc/ncmpcpp/config for a complete reference.
+#
+# Copyright (c) 2026 Jerry Xeo
+
+# --- MPD ------------------------------------------------------------------{{{
+# NOTE: If not set explicitly, the 'mpd_host' option defaults to 'localhost',
+# making ncmpcpp connect to MPD via TCP. To have ncmpcpp use the MPD local
+# socket which is at "$XDG_RUNTIME_DIR/mpd/socket" by default, we must set the
+# MPD_HOST environment variable to "$XDG_RUNTIME_DIR/mpd/socket", because the
+# ncmpcpp configuration does NOT allow shell parameter expansions on variables.
+#mpd_host="$XDG_RUNTIME_DIR/mpd/socket"  # invalid setting!
+mpd_port = 6600
+mpd_connection_timeout = 5
+mpd_music_dir = "~/Music"
+mpd_crossfade_time = 5
+# }}}
+
+# --- Basic settings -------------------------------------------------------{{{
+ncmpcpp_directory = "~/.cache/ncmpcpp"
+lyrics_directory = "~/Music/.lyrics"
+
+startup_screen = playlist
+# No salve screen on startup
+startup_slave_screen = ""
+startup_slave_screen_focus = yes
+
+volume_change_step = 1
+
+# Extern text editor used to edit lyrics
+external_editor = "nvim --clean"
+# Set to yes if external editor is a console program
+use_console_editor = yes
+
+# Available values: none, basic, extended, perl
+regular_expressions = extended
+
+# Switch lyrics to currently playing song
+follow_now_playing_lyrics = yes
+fetch_lyrics_for_current_song_in_background = no
+
+media_library_primary_tag = album_artist
+media_library_albums_split_by_date = yes
+# }}}
+
+# --- UI -------------------------------------------------------------------{{{
+# Fixed window title
+song_window_title_format = ncmpcpp
+
+# Default width of locked screen (in %). Accepted values range from 20 to 80.
+locked_screen_width_part = 60
+ask_for_locked_screen_width_part = no
+
+# Width of media_library screen with two columns
+media_library_column_width_ratio_two = 1:2
+# Width of media_library screen with three columns
+media_library_column_width_ratio_three = 3:3:2
+
+display_bitrate = yes
+display_volume_level = yes
+statusbar_visibility = yes
+progressbar_look = ─■─
+
+# Display mode for browser page
+browser_display_mode = classic
+browser_playlist_prefix = "$2[playlist]$9 "
+
+# Display mode for playlist
+playlist_display_mode = columns
+playlist_disable_highlight_delay = 0
+
+# Song format for 'columns' playlist_display_mode
+song_columns_list_format = (20)[]{a} (6f)[]{NE:T.} (40)[]{t|f:Title} (25)[]{b} (7f)[]{l}
+
+current_item_prefix = $(7)$b$r
+current_item_suffix = $/r$/b$(end)
+current_item_inactive_column_prefix = $(17_247)
+current_item_inactive_column_suffix = $(end)
+now_playing_prefix = $(2)$b
+now_playing_suffix = $/b$(end)
+selected_item_prefix = $(cyan)
+selected_item_suffix = $(end)
+
+# Colors (Check all colors at the bottom of the help page)
+main_window_color = default
+header_window_color = default
+progressbar_color = 249:b
+progressbar_elapsed_color = 3:b
+volume_color = 4
+# }}}
+
+# --- Visualizer -----------------------------------------------------------{{{
+visualizer_look = "▋▋"
+visualizer_color = 47, 83, 119, 155, 191, 227, 221, 215, 209, 203, 197, 161
+# }}}
+
+# vim:ft=conf:foldmethod=marker:foldlevel=0

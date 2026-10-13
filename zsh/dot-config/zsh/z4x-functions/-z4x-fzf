@@ -1,0 +1,70 @@
+# SPDX-License-Identifier: MIT
+#
+# Copyright (c) 2020 Roman Perepelitsa
+#
+# A wrapper of fzf supporting custom bindings.
+
+eval "$_z4x_opt"
+
+local widget="${WIDGET#z4x-}"
+
+local -a cmd flags bindings
+zstyle -a :z4x:$widget fzf-command cmd || cmd=(fzf)
+zstyle -a :z4x:$widget fzf-flags flags || flags=()
+zstyle -a :z4x:$widget fzf-bindings bindings || bindings=()
+
+local -A keys=(
+  ctrl-h     backward-kill-word
+  alt-j      clear-query
+  ctrl-u     clear-query
+  ctrl-k     kill-line
+  alt-k      unix-line-discard
+  ctrl-space toggle-out
+  ctrl-a     toggle-all
+)
+
+if (( ${@[(I)--layout=default]} )); then
+  keys+=(
+    tab      up
+    btab     down
+    ctrl-n   up
+    ctrl-p   down
+  )
+else
+  keys+=(
+    tab      down
+    btab     up
+    ctrl-n   down
+    ctrl-p   up
+  )
+fi
+
+local kv
+for kv in $bindings; do
+  kv=(${(s.:.)kv})
+  (( ${#kv} == 2 )) || continue
+  keys[$kv[1]]="$kv[2]"
+done
+
+local k v
+local -i expect
+for k v in ${(kv)keys}; do
+  if [[ +"$v"+ == *+repeat+* ]]; then
+    flags=(--expect=$k "${flags[@]}")
+    expect=1
+    if [[ "$v" == repeat(|+*) ]]; then
+      keys[$k]=ignore
+    else
+      keys[$k]="${v%%+repeat(|+*)}"
+    fi
+  fi
+done
+
+local keymap
+printf -v keymap '%s:%s,' ${(kv)keys}
+local out=$("${cmd[@]}" "$@" --bind=${keymap%,} "${flags[@]}")
+[[ -n "$out" ]] || return
+(( expect )) || print
+print -r -- "$out"
+
+# vim:ft=zsh

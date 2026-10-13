@@ -1,0 +1,24 @@
+# SPDX-License-Identifier: MIT
+#
+# Copyright (c) 2020 Roman Perepelitsa
+#
+# Move cursor one zword farward.
+
+eval "$_z4x_opt"
+
+local word buf
+
+repeat ${NUMERIC:-1}; do
+  buf="$PREBUFFER$BUFFER"
+  for word in ${(Z:n:)buf} ''; do
+    (( ${#buf} < ${#RBUFFER} )) && break
+    buf="${${buf##[[:space:]]#}:${#word}}"
+  done
+  CURSOR=$(( ${#BUFFER} - ${#buf} ))
+  if (( CURSOR > _z4x_cursor_max() )); then
+    (( --CURSOR ))
+  fi
+done
+return 0
+
+# vim:ft=zsh

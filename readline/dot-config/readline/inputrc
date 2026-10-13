@@ -1,0 +1,31 @@
+# User configuration for the GNU Readline library.
+#
+# This file exists mainly for Bash (which uses Readline for line editing) to
+# switch cursor shapes between Vi Normal mode and Vi Insert modes.
+#
+# Copyright (c) 2026 Jerry Xeo
+
+# Show editing mode in prompt, which is required by mode string.
+set show-mode-in-prompt on
+
+# Swtich cursor shape between vi command mode and insert mode.
+# In vi-cmd mode, cursor turns into block (box) shape.
+set vi-cmd-mode-string "\1\e[2 q\2"
+# In vi-ins mode, cursor turns into beam (bar) shape.
+set vi-ins-mode-string "\1\e[6 q\2"
+
+# Reduce timeout to wait for key continuation after hitting the Escape key in
+# Bash Vi mode.
+#
+# Whenever the Esc key is hit, it can be either a single key press or the start
+# of an Alt/Meta modified key sequence (e.g., Alt+f). To distinguish between
+# them, the GNU Readline waits briefly 500ms by default to see if any subsequent
+# key presses follows Esc, which could cause lag in Bash vi mode.
+#
+# WARN: A timeout that is too short may cause an Alt/Meta modified key sequence
+# to go unrecognized, as you may not be able to type fast enough or your
+# keyboard may not respond rapidly enough. A timeout of 10-50 ms is generally
+# safe, but feel free to adjust it if 10 ms doesn't fit.
+set keyseq-timeout 10
+
+# vim:ft=readline

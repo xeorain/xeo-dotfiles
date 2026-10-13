@@ -1,0 +1,71 @@
+# SPDX-License-Identifier: MIT
+#
+# Copyright (c) 2026 Jerry Xeo
+#
+# Quickly navigate to a specific parent directory.
+#
+# Arguments:
+#   $1: Either a number representing the Nth level of parent directory or a
+#     string matching a specific parent component in $PWD.
+#
+# Returns:
+#   0 on success; 1 on errors.
+#
+# Usage:
+#   Given $PWD expands to /A/B/C/D, do either of the following to navigate into
+#   /A/B:
+#
+#   * `bd 3` (equivalent to `bd ../../..`)
+#   * `bd B`
+#
+# Reference: https://github.com/Tarrasch/zsh-bd
+
+(( $# )) || return 1
+
+local requested_dest="$1"
+local dest='./'
+local parent
+local -i num_parents
+
+# Split current working directory path into an array on '/'.
+local -a parents=(${(ps:/:)PWD})
+# Prepend root to the parents array, and remove the current working directory
+# from the array as it is not a parent.
+# INFO: `shift -p` pops the last element from an array.
+parents=('/' "${parents[@]}")
+shift -p parents
+num_parents=${#parents}
+
+# NOTE:
+# * `<->` is a special pattern in Zsh that matches one or more digits
+# * Zsh array is 1-based.
+local i
+if [[ "$requested_dest" == <-> ]]; then
+  if (( $requested_dest > $num_parents )); then
+    printf -- '%s: error: cannot go %s levels up\n' "$0" "$requested_dest" >&2
+    return 1
+  fi
+
+  for (( i = 1; i <= requested_dest; ++i )); do
+    dest+='../'
+  done
+
+  cd "$dest"
+  return $?
+else
+  for (( i = num_parents; i >= 1; --i )); do
+    parent="$parents[$i]"
+    dest+='../'
+
+    if [[ "$requested_dest" == "$parent" ]]; then
+      cd "$dest"
+      return $?
+    fi
+  done
+fi
+
+printf -- '%s: error: no parent directory named "%s"\n' "$0" "$requested_dest" >&2
+
+return 1
+
+# vim:ft=zsh

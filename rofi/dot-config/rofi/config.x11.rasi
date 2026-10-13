@@ -1,0 +1,30 @@
+// User configuration for rofi specific to X11.
+//
+// Copyright (c) 2026 Jerry Xeo
+
+configuration {
+  modes: "window,drun,run";
+  combi-modes: "window,drun,run";
+  dpi: 162;
+  font: "Fira Sans 10";
+  icon-theme: "Papirus";
+  show-icons: true;
+  kb-accept-entry: "Control+m,Return,KP_Enter";
+  kb-mode-complete: "";
+  kb-mode-next: "Control+l,Shift+Right,Control+Tab";
+  kb-mode-previous: "Control+h,Shift+Left,Control+ISO_Left_Tab";
+  kb-remove-char-back: "BackSpace";
+  kb-remove-to-eol: "Control+Shift+e";
+  kb-row-up: "Up,Control+k";
+  kb-row-down: "Down,Control+j,Alt+Tab";
+  terminal: "kitty";
+
+  // disable icons in 'run' mode
+  run {
+    show-icons: false;
+  }
+}
+
+@theme "themes/modus-operandi"
+
+// vim:ft=rasi

@@ -1,0 +1,79 @@
+#!/bin/sh
+# SPDX-License-Identifier: MIT
+#
+# Copyright (c) 2026 Jerry Xeo
+#
+# A helper script that takes screenshot in Sway.
+#
+# Usage: screenshot-helper <TARGET> [<FILE>]
+#
+# Arguments:
+#   TARGET  aa  capture all display outputs combined
+#           ao  capture the currently focused display output
+#           aw  capture the currently focused window
+#           ig  select a rectangular region and capture it
+#           io  select a display output and capture it
+#           iw  select a window and capture it
+#           ix  select a window (by clicking on it), a display output (by
+#               clicking outside of all windows, e.g., on the status bar), or a
+#               rectangle region (by clicking and dragging)
+#   FILE    save the screenshot image to FILE. If not specified, a file is
+#           created with a timestamped name in $XDG_PICTURES_DIR/Screenshots. If
+#           <FILE> is -, the image is written to the standard output.
+#
+# Requires:   jq, slurp, sway, xeo-screenshot-wlr
+
+[ $# -ge 1 ] \
+  && command -v xeo-screenshot-wlr >/dev/null 2>&1  \
+  || exit 1
+
+tgt="$1"
+outfile="${2:-}"
+
+get_active_disp_output() {
+  geom="$(swaymsg -t get_outputs | jq -r '.[] | select(.focused) | .name')"
+  [ -n "${geom:-}" ] || exit 1
+}
+
+get_active_window() {
+  geom="$(swaymsg -t get_tree \
+    | jq -r 'recurse(.nodes[]?, .floating_nodes[]?) | select(.focused) | .rect | "\(.x),\(.y) \(.width)x\(.height)"')"
+  [ -n "${geom:-}" ] || exit 1
+}
+
+select_window() {
+  geom="$(swaymsg -t get_tree \
+    | jq -r '.. | select(.pid? and .visible?) | .rect | "\(.x),\(.y) \(.width)x\(.height)"' \
+    | slurp -r)"
+  [ -n "${geom:-}" ] || exit 1
+}
+
+select_anything() {
+  geom="$(swaymsg -t get_tree \
+    | jq -r '.. | select(.pid? and .visible?) | .rect | "\(.x),\(.y) \(.width)x\(.height)"' \
+    | slurp -o)"
+  [ -n "${geom:-}" ] || exit 1
+}
+
+case "${tgt}" in
+  aa|ig|io) # capture targets directly supported by xeo-screenshot-wlr
+    xeo-screenshot-wlr -t "${tgt}" "${outfile:-}"
+    exit $?
+    ;;
+  ao) # get the currently focused display output
+    get_active_disp_output
+    xeo-screenshot-wlr -o "${geom}" "${outfile:-}"
+    exit $?
+    ;;
+  aw) # get the currently focused window
+    get_active_window
+    ;;
+  iw) # seletc a window
+    select_window
+    ;;
+  ix) # select anything
+    select_anything
+    ;;
+esac
+
+xeo-screenshot-wlr -g "${geom}" "${outfile:-}"

@@ -1,0 +1,64 @@
+# Theme configuration for Sway.
+#
+# Copyright (c) 2026 Jerry Xeo
+
+# Geometry:
+default_border pixel 2
+default_floating_border pixel 2
+titlebar_padding 1
+titlebar_border_thickness 0
+
+### Fonts
+#
+# NOTE: Place "Symbols Nerd Font" before "Adwaita Sans" to let Nerd Font glyphs
+# take precedence for symbols, as they share some code points.
+font pango:Symbols Nerd Font, Adwaita Sans, Noto Sans, Font Awesome 7 Free, Font Awesome 7 Brands, Font Awesome 6 Free, Font Awesome 6 Brands, Noto Color Emoji, Noto Emoji 9
+
+### Colors
+#
+set $color0  #121212
+set $color1  #ad4646
+set $color2  #427b58
+set $color3  #b88f55
+set $color4  #517eb5
+set $color5  #944a76
+set $color6  #47989d
+set $color7  #d4d4d4
+set $color8  #5d5f71
+set $color9  #c55b5b
+set $color10 #66ab6c
+set $color11 #c8a066
+set $color12 #6094cb
+set $color13 #a85486
+set $color14 #55a6ac
+set $color15 #f3f3f3
+
+set $color_bg #282a2b
+set $color_fg #eeeeee
+
+# Client colors
+# Property Name         Border    BG         Text      Indicator Child Border
+client.focused          $color5   $color5    $color_fg $color8   $color5
+client.focused_inactive $color_bg $color_bg  $color7   $color8   $color_bg
+client.unfocused        $color_bg $color0    $color7   $color8   $color_bg
+client.urgent           $color9   $color9    $color15  $color11  $color9
+client.placeholder      $color0   $color0    $color7   $color0   $color0
+client.background       $color15
+
+# Bar colors
+set $color_bar_bg #222b2e
+set $color_bar_fg #abb9b6
+set $color_bar_ug #fff9e0
+set $color_bar_sep #2a3438
+
+# More favored colors for reference
+#set $color_cyan #076678
+#set $color_green #427b58
+#set $color_orange #d65d0e
+#set $color_purple #8f3171
+#set $color_red #b16286
+#set $color_yellow #d79921
+#set $color_dark_purple #6f3f89
+#set $color_dark_blue #005577
+
+# vim:ft=swayconfig

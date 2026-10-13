@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: MIT
+#
+# Copyright (c) 2020 Roman Perepelitsa
+# Copyright (c) 2026 Jerry Xeo
+#
+# Write the recently accessed directories to the history file.
+
+# Place the directory history file in the XDG-compliant state directory.
+local file="${XDG_STATE_HOME:-$HOME/.local/state}/zsh/dir-history-$EUID"
+local tmp="${file}.tmp.$$"
+print -rC1 -- $_z4x_dir_history >"$tmp"
+zf_mv -f -- "$tmp" "$file"
+
+# vim:ft=zsh

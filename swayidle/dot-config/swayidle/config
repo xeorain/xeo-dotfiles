@@ -1,0 +1,23 @@
+# User configuration for swayidle.
+#
+# Copyright (c) 2026 Jerry Xeo
+
+# If the screen is not yet locked after 600 seconds of inactivity, lock the
+# screen. Then if the screen keeps locked after another 300 seconds of
+# inactivity, turn off all displays.
+timeout 600 'swaylock -f'
+timeout 900 'swaymsg "output * power off"' resume 'swaymsg "output * power on"'
+
+# If the screen has already been locked after 60 seconds of inactivity, turn off
+# all displays immediately.
+timeout 60 'pgrep -u "$USER" -x swaylock >/dev/null && swaymsg "output * power off"' resume 'pgrep -u "$USER" -x swaylock >/dev/null && swaymsg "output * power on"'
+
+# Command to execute right before the system is about to sleep
+before-sleep 'swaylock -f'
+
+# Commands to execute when systemd (logind) signals the system to lock or unlock
+# the screen.
+lock 'swaylock -f'
+unlock 'pkill -u "$USER" -SIGUSR1 -x swaylock'
+
+# vim:ft=conf

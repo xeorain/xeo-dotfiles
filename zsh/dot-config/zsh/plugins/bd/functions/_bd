@@ -1,0 +1,36 @@
+#compdef bd
+#
+# Copyright (c) 2026 Jerry Xeo
+#
+# The completion definition for `bd`.
+
+_bd() {
+  # Get parents in reverse order.
+  local matcher_list
+  local -a parents=(${(ps:/:)PWD})
+  local -a reversed_parents
+  local num_parents
+
+  zstyle -s ':completion:*' matcher-list matcher_list
+
+  parents=('/' "${parents[@]}")
+  shift -p parents
+  num_parents=${#parents}
+
+  local i
+  for (( i = num_parents; i >= 1; --i )); do
+    reversed_parents+=("$parents[$i]")
+  done
+
+  local expl
+  _wanted -V directories expl 'parent directories' \
+    compadd -M "$matcher_list" "$@" -- "${reversed_parents[@]}"
+}
+
+if [[ "$funcstack[1]" == '_bd' ]]; then
+  _bd "$@"
+else
+  compdef _bd bd
+fi
+
+# vim:ft=zsh

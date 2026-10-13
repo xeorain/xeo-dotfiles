@@ -1,0 +1,176 @@
+# User configuration for interactive Bash sessions.
+#
+# Copyright (c) 2026 Jerry Xeo
+
+# Check whether Bash is running in interactive mode by checking the value of
+# $-, which holds the current set of shell options, and return immediately if
+# it is not. Normally, a non-interactive Bash does not source ~/.bashrc, but
+# ~/.bash_profile is intentionally designed to source this file unconditionally
+# to handle the special text console login case (see ./bash_profile). This guard
+# is necessary to prevent ~/.bashrc from being sourced in a non-interactive
+# login shell. See "./bash_profile.sh".
+case $- in
+*i*) # interactive
+  ;;
+*)
+  return
+  ;;
+esac
+
+_XEO_SH_CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/shell"
+_XEO_BASH_CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/bash"
+
+# --- Base environment -----------------------------------------------------{{{
+# Make a non-login interactive Bash session have a shared base environment in
+# Wayland sessions by sourcing a shared base shell profile.
+# NOTE: There is no need to source this profile in X11 sessions, as the X11
+# session initialization scripts make an X11 session inherit the login shell
+# environment.
+if [[ -n "${WAYLAND_DISPLAY}" ]] \
+    && ! shopt -q login_shell \
+    && [[ $SHLVL -eq 1 ]]; then
+  . "${_XEO_SH_CONFIG_DIR}/profile.sh"
+fi
+
+# Source system-level bashrc configuration.
+# NOTE: On some Linux distros (e.g., Fedora), an interactive Bash session does
+# not automatically source the system-level bashrc (e.g., /etc/bashrc) before
+# sourcing the per-user bashrc.
+[[ -s /etc/bashrc ]] && . /etc/bashrc
+
+# Load shared aliases and functions from the base environment.
+[[ -s "${_XEO_SH_CONFIG_DIR}/aliases.sh" ]] && . "${_XEO_SH_CONFIG_DIR}/aliases.sh"
+[[ -s "${_XEO_SH_CONFIG_DIR}/functions.sh" ]] && . "${_XEO_SH_CONFIG_DIR}/functions.sh"
+
+# Load color scheme for `ls`.
+case "${OSTYPE}" in
+  linux*)
+    [[ -f "${_XEO_SH_CONFIG_DIR}/dircolors" ]] \
+      && eval "$(dircolors "${_XEO_SH_CONFIG_DIR}/dircolors")"
+    ;;
+  darwin*)
+    # macOS uses the BSD `ls` that recognizes LSCOLORS which is incompatible
+    # with LS_COLORS used by the GNU `ls`. LSCOLORS has a much less supported
+    # file types than GNU's LS_COLORS. There is no equivalent program to GNU's
+    # `dircolors` that can generate the environment variable from a color scheme
+    # source file. `__xeo_export_bsd_lscolors()` is a bash function defined in
+    # ~/.config/shell/functions.sh that generates LSCOLORS from a custom color
+    # scheme source file (~/.config/shell/bsd_lscolorsrc), and caches the value
+    # of LSCOLORS in ~/.config/shell/bsd_lscolors to speed up subsequent
+    # loading.
+    __xeo_export_bsd_lscolors \
+      "${_XEO_SH_CONFIG_DIR}/bsd_lscolorsrc" \
+      "${_XEO_SH_CONFIG_DIR}/bsd_lscolors"
+    ;;
+esac
+# }}}
+
+# --- Options --------------------------------------------------------------{{{
+shopt -s histappend    # append history instead of overwriting
+shopt -s checkwinsize  # check window size after each command execution
+if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
+  shopt -s autocd      # auto switch to a directory just by typing its path name
+  shopt -s globstar    # make wildcard ** match files and directories recursively
+fi
+# }}}
+
+# --- Prepare cache and state directories ----------------------------------{{{
+# Use an XDG-compliant state directory for history data.
+[[ -d "${XDG_STATE_HOME:-${HOME}/.local/state}"/bash ]] \
+  || mkdir -p "${XDG_STATE_HOME:-${HOME}/.local/state}/bash" \
+  || return
+# }}}
+
+# --- Built-in variables (parameters) --------------------------------------{{{
+HISTFILE="${XDG_STATE_HOME:-${HOME}/.local/state}/bash/history"
+HISTSIZE=2000           # number of internal history records
+HISTFILESIZE=20000      # number of records in history file
+HISTCONTROL=ignoreboth  # ignore identical or empty entries in history
+# Commands to be excluded from the command history.
+HISTIGNORE='cd:cd -:cd ..:pwd:ls:exit'
+# }}}
+
+# --- Load Bash-specific aliases and functions -----------------------------{{{
+[[ -s "${_XEO_BASH_CONFIG_DIR}/aliases.bash" ]]  && . "${_BASH_CONFIG_DIR}/aliases.bash"
+[[ -s "${_XEO_BASH_CONFIG_DIR}/functions.bash" ]]  && . "${_BASH_CONFIG_DIR}/functions.bash"
+# }}}
+
+# --- Key bindings ---------------------------------------------------------{{{
+# Enable vi mode for line editing.
+set -o vi
+
+# Use ctrl+l to clear screen in both vi-command and vi-insert keymap modes.
+bind -m vi-command 'Control-l: clear-screen'
+bind -m vi-insert 'Control-l: clear-screen'
+
+# In vi-insert mode, emacs-style prefix keys (e.g., Ctrl+x) are completely
+# disabled, being treated as literal characters. To use Ctrl+x as a key binding
+# prefix, we must manually define Ctrl+x as a prefix-meta so that Bash waits for
+# subsequent key presses whenever encountering the key sequence for Ctrl+x.
+bind -m vi-insert '"\C-x": prefix-meta'
+# }}}
+
+# --- User key bindings ----------------------------------------------------{{{
+# Key bindings for executing xeo extra environment utilities, requiring
+# ~/.local/bin/xeo-util and internal helper programs in the ~/.local/libexec/xeo
+# directory.
+if command -v xeo-util >/dev/null 2>&1; then
+  # Switch theme mode between 'dark' and 'light' for some CLI/TUI applications.
+  bind -x '"\C-x\C-a": xeo-util switch-theme-mode'
+  # Switch the background style between 'dark' and 'light' for Vim/Neovim.
+  bind -x '"\C-x\C-b": xeo-util switch-vim-bg'
+fi
+# }}}
+
+# --- Command completion ---------------------------------------------------{{{
+# Load completion definition files manually on macOS, as macOS ships a minimal
+# Bash configuration that does not automatically load completions.
+case "${OSTYPE}" in
+  darwin*)
+    # Source completion definition files from packages installed via `brew`.
+    if [[ -d "${HOMEBREW_PREFIX}/etc/bash_completion.d" ]]; then
+      for f in "${HOMEBREW_PREFIX}/etc/bash_completion.d"/*; do
+        . "${f}"
+      done
+    fi
+
+    # Source manually installed completion definition files.
+    for d in '/usr/local/share/bash-completion/completions' \
+        "${XDG_DATA_HOME:-${HOME}/.local/share}/bash-completion/completions"; do
+      if [[ -d "${d}" ]]; then
+        for f in "${d}"/*; do
+          . "${f}"
+        done
+      fi
+    done
+    unset d f
+    ;;
+esac
+# }}}
+
+# --- Plugins --------------------------------------------------------------{{{
+# Use `fzf` (>= 0.48) shell integration.
+command -v fzf &>/dev/null && eval "$(fzf --bash)"
+# }}}
+
+# --- Command-line prompts -------------------------------------------------{{{
+export PS4='+ ${LINENO}: '
+
+# Prompt enhancement for git repos
+[[ -s '/usr/share/git/completion/git-prompt.sh' ]] && . '/usr/share/git/completion/git-prompt.sh'
+GIT_PS1_SHOWDIRTYSTATE=1      # + for staged, * if unstaged.
+GIT_PS1_SHOWSTASHSTATE=1      # $ if something is stashed.
+GIT_PS1_SHOWUNTRACKEDFILES=1  # % if there are untracked files.
+GIT_PS1_SHOWUPSTREAM=1        # <, >, <> behind, ahead, or diverged from upstream.
+GIT_PS1_STATESEPARATOR=' '    # separator between branch name and state symbols
+GIT_PS1_DESCRIBE_STYLE=1      # show commit relative to tag or branch, when detached HEAD
+GIT_PS1_SHOWCOLORHINTS=1      # display in color
+# }}}
+
+unset _XEO_SH_CONFIG_DIR _XEO_BASH_CONFIG_DIR
+
+# --- User-speicifc supplementary stuff ------------------------------------{{{
+[[ -s "${HOME}/.bashrc.local" ]] && . "${HOME}/.bashrc.local"
+# }}}
+
+# vim:ft=bash:foldmethod=marker:foldlevel=0

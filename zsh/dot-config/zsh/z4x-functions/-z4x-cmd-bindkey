@@ -1,0 +1,66 @@
+# SPDX-License-Identifier: MIT
+#
+# Copyright (c) 2020 Roman Perepelitsa
+# Copyright (c) 2026 Jerry Xeo
+#
+# The public z4x interface used to create key bindings with human-friendly
+# characters instead of terminal key codes.
+#
+# Usage:
+#   See -z4x-help-bindkey
+
+eval "$_z4x_opt"
+
+local -a keymap_mode keymap_str
+zparseopts -D -F -- M:=keymap_mode s=keymap_str 2>/dev/null || return '_z4x_err()'
+
+if (( ARGC < 2 )); then
+  -z4x-help-bindkey >&2
+  return 1
+fi
+
+(( ${+_z4x_key} )) || return 0
+
+local kb seq seqs new_seqs
+
+for kb in ${@:2}; do
+  seqs=('')
+  for kb in ${(@s: :)kb}; do
+    if [[ -n "${seq::=$_z4x_key[$kb]}" ]]; then
+      seqs=(${^seqs}$seq)
+    else
+      case "$kb" in
+        ?~[a-z])
+          seqs=(${^seqs}$kb ${^seqs}${(L)kb})
+          ;;
+        Ctrl+[A-Z'[]\'])
+          seqs=(${^seqs}'^'$kb[-1])
+          ;;
+        (Alt|Option)+[A-Z'[]\/.,'])
+          new_seqs=(${^seqs}'^['$kb[-1] ${^seqs}'^['${(L)kb[-1]})
+          if zstyle -T :z4x:bindkey macos-option-as-alt &&
+            [[ -n "${seq::=$_z4x_macos_opt_key[$kb[-1]]}" ]]; then
+            new_seqs+=(${^seqs}$seq)
+            if [[ -n "${seq::=$_z4x_macos_opt_key[${(L)kb[-1]}]}" ]]; then
+              new_seqs+=(${^seqs}$seq)
+            fi
+          fi
+          seqs=($new_seqs)
+          ;;
+        Ctrl+(Alt|Option)+[A-Z'[]\'])
+          seqs=(${^seqs}'^[^'$kb[-1])
+          ;;
+        *)
+          print -Pru2 -- '%F{3}z4x%f: invalid key binding: %F{1}'${kb//\%/%%}'%f'
+          return '_z4x_err()'
+          ;;
+      esac
+    fi
+  done
+done
+
+for seq in ${(u)seqs}; do
+  builtin bindkey $keymap_mode $keymap_str -- "$seq" "$1"
+done
+
+# vim:ft=zsh

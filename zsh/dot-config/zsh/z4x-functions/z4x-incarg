@@ -1,0 +1,277 @@
+# This is a copy of
+# https://github.com/zsh-users/zsh/blob/975572f5c32f15ef078a678d9ed05c4be4e64822/Functions/Zle/incarg.
+#
+# License:
+# https://github.com/zsh-users/zsh/blob/975572f5c32f15ef078a678d9ed05c4be4e64822/LICENCE
+
+# A ZLE widget to increment an integer
+#
+# In addition to decimals, it can handle hexadecimals prefixed with "0x",
+# binaries with "0b", and octals with "0o".
+#
+# By default, the target integer will be incremented by one. With a numeric
+# argument, the integer is incremented by the amount of the argument. The shell
+# parameter "incarg" may be set to change the default increment to something
+# other than one.
+#
+# The behavior of this widget changes depending on how it is named.
+#
+# - incarg / decarg
+#
+# incarg will increment an integer either under the cursor or just to the left
+# of it. decarg, on the other hand, will decrement it.
+#
+# - sync-incarg / sync-decarg
+#
+# The sync- variant is used for creating a sequence of numbers on split
+# terminals with synchronized key input.
+#
+# - vim-incarg / vim-decarg
+#
+# This behaves like Vim's CTRL-A / CTRL-X. It moves the cursor to the nearest
+# number after the cursor and increments or decrements it.
+#
+# - vim-backward-incarg / vim-backward-decarg
+#
+# This behaves like vim-incarg & vim-decarg, but it searches backwards for a
+# number.
+#
+# - vim-sync-incarg / vim-sync-decarg
+#
+# This combines the behavior of the vim- and sync- variants.
+#
+# - vim-backward-sync-incarg / vim-backward-sync-decarg
+#
+# This combines the behavior of the vim-backward- and sync- variants.
+
+zle -f vichange
+setopt localoptions extended_glob
+
+local match mbegin mend MATCH MBEGIN MEND i
+
+[[ -z "$BUFFER" ]] && return 1
+
+integer pos=$(( CURSOR + 1 )) base=0
+
+while (( pos > 0 )) && [[ "$BUFFER[pos]" == '' ]]; do
+  (( pos-- ))
+done
+
+for (( i = 0; i < 2; i++ )); do
+  case "$BUFFER[1,pos]" in
+    *0[xX][0-9a-fA-F]##) base=16 ;;
+    *0[oO][0-7]##)       base=8 ;;
+    *0[bB][01]##)       base=2 ;;
+    *[1-9])             base=10 ;;
+    *0)                 ;;
+    *)
+      if [[ "$WIDGET" != vi* ]]; then
+        if (( i == 0 )); then
+          (( pos-- ))
+          continue
+        else
+          return 1
+        fi
+      fi
+      ;;
+  esac
+  break
+done
+
+if (( base == 0 && pos < $#BUFFER )); then
+  case "$BUFFER[1,pos+1]" in
+    *0[xX][0-9a-fA-F]) base=16; (( pos++ )) ;;
+    *0[oO][0-7])       base=8;  (( pos++ )) ;;
+    *0[bB][01])        base=2;  (( pos++ )) ;;
+  esac
+fi
+
+if (( base == 0 )); then
+  if [[ "$WIDGET" == vi* ]]; then
+    if [[ "$WIDGET" == *backward-* ]]; then
+      while true; do
+        case "$BUFFER[1,pos]" in
+          *0[xX][0-9a-fA-F]##) base=16 ;;
+          *0[oO][0-7]##)       base=8 ;;
+          *0[bB][01]##)        base=2 ;;
+          *[0-9])              base=10 ;;
+          -*)
+            case "$BUFFER[pos,-1]" in
+              -0[xX][0-9a-fA-F]*) ;;
+              -0[oO][0-7]*)       ;;
+              -0[bB][01]*)        ;;
+              -[0-9]*)            base=10 ;;
+            esac
+            ;;
+        esac
+
+        (( base != 0 )) && break
+        (( pos-- ))
+        (( pos <= 0 )) && return 1
+      done
+    else
+      while [[ "$BUFFER[pos]" == [^0-9] ]]; do
+        (( pos++ ))
+        (( pos > $#BUFFER )) && return 1
+      done
+    fi
+  fi
+
+  if (( pos <= 1 )) || [[ "$BUFFER[pos-1]" == [^0-9] ]]; then
+    case "$BUFFER[pos,-1]" in
+      0[xX][0-9a-fA-F]*) base=16; (( pos += 2 )) ;;
+      0[oO][0-7]*)       base=8;  (( pos += 2 )) ;;
+      0[bB][01]*)        base=2;  (( pos += 2 )) ;;
+    esac
+  fi
+fi
+
+(( base == 0 )) && base=10
+
+integer first="$pos"
+
+case "$base" in
+  10)
+    while [[ "$BUFFER[first-1]" == [0-9] ]]; do
+      (( first-- ))
+    done
+    if [[ $BUFFER[first-1] = - ]]; then
+      (( first-- ))
+    fi
+    ;;
+  2)
+    while [[ "$BUFFER[first-1]" == [01] ]]; do
+      (( first-- ))
+    done
+    ;;
+  8)
+    while [[ "$BUFFER[first-1]" == [0-7] ]]; do
+      (( first-- ))
+    done
+    ;;
+  16)
+    while [[ "$BUFFER[first-1]" == [0-9a-fA-F] ]]; do
+      (( first-- ))
+    done
+    ;;
+esac
+
+integer last="$pos"
+
+case "$base" in
+  10)
+    while [[ "$BUFFER[last+1]" == [0-9] ]]; do
+      (( last++ ))
+    done
+    ;;
+  2)
+    while [[ "$BUFFER[last+1]" == [01] ]]; do
+      (( last++ ))
+    done
+    ;;
+  8)
+    while [[ "$BUFFER[last+1]" == [0-7] ]]; do
+      (( last++ ))
+    done
+    ;;
+  16)
+    while [[ "$BUFFER[last+1]" == [0-9a-fA-F] ]]; do
+      (( last++ ))
+    done
+    ;;
+esac
+
+integer ndigits=0
+
+case "$BUFFER[first,first+1]" in
+  0*|-0) ndigits=$(( last - first + 1 )) ;;
+esac
+
+integer delta=${NUMERIC:-${incarg:-1}}
+
+if [[ "$WIDGET" = *decarg ]]; then
+  (( delta = -delta ))
+fi
+
+if [[ "$WIDGET" = *sync-* ]]; then
+  integer pane_index=0
+
+  if [[ -n "$TMUX_PANE" ]]; then
+    pane_index="$(tmux display-message -pt "$TMUX_PANE" '#{pane_index}')"
+  elif [[ "$ITERM_SESSION_ID" =~ '^w[0-9]+t[0-9]+p([0-9]+)' ]]; then
+    pane_index="$match[1]"
+  else
+    zle -M "[$WIDGET] unsupported terminal"
+    return 1
+  fi
+
+  (( delta *= pane_index ))
+fi
+
+local old="$BUFFER[first,last]"
+integer oldlen=$#BUFFER
+integer oldnum="$base#$old" 2> /dev/null
+
+if [[ "$BUFFER[first]" == '-' ]] && (( oldnum == 0 )); then
+  (( ndigits-- ))
+fi
+
+local fmt1 fmt2
+
+case "$base" in
+  10) fmt1=d; fmt2='#10' ;;
+  2)  fmt1=s; fmt2='##2' ;;
+  8)  fmt1=s; fmt2='##8' ;;
+  16) fmt1="$BUFFER[first-1]"; fmt2='#16' ;;
+esac
+
+local raw_result padded
+
+printf -v raw_result "%0$ndigits$fmt1" \
+  $(( [$fmt2] "$base#$old" + delta )) 2> /dev/null
+
+padded="${raw_result// /0}"
+
+integer newnum="$base#$padded" 2> /dev/null
+
+if (( base != 10 && newnum < 0 ||
+      delta > 0 && newnum < oldnum ||
+      delta < 0 && newnum > oldnum )); then
+  zle -M "[$WIDGET] The resulting number is either too big or too small."
+  return 1
+fi
+
+local new
+
+if (( base == 10 && ndigits == $#padded )); then
+  if (( oldnum < 0 && newnum >= 0 )); then
+    new="${padded#0}"
+  elif (( oldnum >= 0 && newnum < 0 )); then
+    new="-0${padded#-}"
+  fi
+fi
+
+[[ -z "$new" ]] && new="$padded"
+
+if zstyle -t ":zle:$WIDGET" debug; then
+  zle -M "[$WIDGET] base: $base delta: $delta old: '$old' new: '$new'"
+fi
+
+if (( 0 < first && first <= last && last <= $#BUFFER )); then
+  BUFFER[first,last]="$new"
+else
+  zle -M "[$WIDGET] The detected location of the integer was invalid. [location=BUFFER[$first,$last]]"
+  return 1
+fi
+
+integer offset=0
+
+if [[ "$WIDGET" == vi* ]]; then
+  offset=-1
+fi
+
+(( CURSOR = last + $#BUFFER - oldlen + offset ))
+
+return 0
+
+# vim:ft=zsh

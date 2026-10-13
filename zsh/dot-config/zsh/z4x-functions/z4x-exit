@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: MIT
+#
+# Copyright (c) 2020 Roman Perepelitsa
+
+local code=$?
+
+builtin eval "$_z4x_opt"
+builtin zle || builtin exit code
+
+typeset -g precmd_functions=(z4x-exit)
+
+if [[ "$BUFFER" == [[:space:]]# ]]; then
+  builtin zle -w accept-line
+else
+  builtin zle -w send-break
+fi
+
+# vim:ft=zsh

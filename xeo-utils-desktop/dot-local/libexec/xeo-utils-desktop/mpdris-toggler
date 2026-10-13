@@ -1,0 +1,36 @@
+#!/bin/sh
+# SPDX-License-Identifier: MIT
+#
+# Copyright (c) 2026 Jerry Xeo
+#
+# Toggle mpdris2-rs and mpd systemd services.
+#
+# Usage: mpdris-toggler <start|stop>
+#
+# Requires:     mpd, mpc, mpdris2-rs (https://github.com/szclsya/mpdris2-rs),
+#               ~/.config/systemd/user/mpdris2-rs.service
+#
+# Recommends:   libnotify
+
+action="$1"
+systemctl --user is-active mpdris2-rs.service >/dev/null 2>&1
+inactive=$?
+
+case "${action}" in
+  start)
+    if [ "${inactive}" != 0 ]; then
+      systemctl --user start mpdris2-rs.service \
+        && mpc play >/dev/null 2>&1 \
+        && mpc stop >/dev/null 2>&1 \
+        && command -v notify-send >/dev/null \
+        && notify-send -u low -r 666 -t 1100 'Music Player' 'Started'
+    fi
+    ;;
+  stop)
+    if [ "${inactive}" = 0 ]; then
+      systemctl --user stop mpdris2-rs.service \
+        && command -v notify-send >/dev/null \
+        && notify-send -u low -r 666 -t 1100 'Music Player' 'Stopped'
+    fi
+    ;;
+esac

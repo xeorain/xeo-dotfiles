@@ -1,0 +1,28 @@
+# SPDX-License-Identifier: MIT
+# Xeorain Dark theme for Ghostty
+# Copyright (c) 2026 Jerry Xeo
+
+palette = 0=#252525
+palette = 1=#b14242
+palette = 2=#6a8f5e
+palette = 3=#bc7e4c
+palette = 4=#5b7db8
+palette = 5=#ad7fa8
+palette = 6=#5a9197
+palette = 7=#d4d4d4
+palette = 8=#5d5f71
+palette = 9=#be5252
+palette = 10=#7aa16c
+palette = 11=#cb8e5c
+palette = 12=#6b8dc8
+palette = 13=#bd8fb8
+palette = 14=#61aaa7
+palette = 15=#f5f5f5
+background = #121b20
+foreground = #a1b0b8
+cursor-color = #a1b0b8
+cursor-text = #121b20
+selection-background = #b0bec5
+selection-foreground = #2a2d32
+
+# vim:ft=conf

@@ -1,0 +1,22 @@
+#!/bin/sh
+# SPDX-License-Identifier: MIT
+#
+# Copyright (c) 2026 Jerry Xeo
+#
+# Send signal to a status bar.
+#
+# Usage: bar-signal <BARNAME> <SIGNUM>
+#
+# Arguments:
+#   BARNAME  The name of the status bar program
+#   SIGNUM   The signal number
+
+[ $# -lt 2 ] && exit 1
+
+case "$2" in
+  *[!0-9]*)  # non-digits in signal number
+    exit 1
+    ;;
+esac
+
+pidof -sx "$1" >/dev/null 2>&1 && pkill -U "${USER}" -SIGRTMIN+"$2" -x "$1"

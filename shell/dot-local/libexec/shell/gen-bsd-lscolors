@@ -1,0 +1,85 @@
+#!/bin/bash
+# SPDX-License-Identifier: MIT
+#
+# A helper script that generates BSD LSCOLORS from a custom color scheme source
+# file.
+#
+# The generated result is cached to a local file, thus boosting subsequent shell
+# startup by attempting to source the cache file first instead of always
+# executing the entire function.
+#
+# This script does not check for access to the color scheme source file, so it
+# is up to the caller to ensure the source file is accessible.
+#
+# Usage: gen-bsd-colors <SOURCE> <CACHE>
+#
+# Arguments:
+#   <SOURCE>  A string representing the path to the color scheme source file.
+#   <CACHE>   A string representing the path to the cache file.
+#
+# Copyright (c) 2026 Jerry Xeo
+
+[[ "$#" -eq 2 ]] || exit 1
+
+SRCFILE="$1"
+CACHE="$2"
+
+# Characters for ANSI colors used in BSD LS_COLORS.
+readonly COLOR_CODES=(a b c d e f g h A B C D E F G H)
+# Two-character filetype codes used in BSD LS_COLORS.
+readonly FT_CODES=(di ln so pi ex bd cd su sg tw ow)
+
+# Although less efficient, here an indexed array is used instead of an
+# associative array to store the color settings for backward compatibility with
+# Bash 3.2 on macOS, which doesn't support associative arrays.
+#
+# INFO: Apple keeps using Bash 3.2 on macOS because newer versions are GPLv3
+# licensed, which Apple refuses to adopt.
+cfg=('' '' '' '' '' '' '' '' '' '' '')
+
+while IFS='=' read -r k v; do
+  [[ -z "${k}" ]] || [[ "${k}" =~ ^# ]] && continue
+  case "${k}" in
+    di) cfg[0]="${v}" ;;
+    ln) cfg[1]="${v}" ;;
+    so) cfg[2]="${v}" ;;
+    pi) cfg[3]="${v}" ;;
+    ex) cfg[4]="${v}" ;;
+    bd) cfg[5]="${v}" ;;
+    cd) cfg[6]="${v}" ;;
+    su) cfg[7]="${v}" ;;
+    sg) cfg[8]="${v}" ;;
+    tw) cfg[9]="${v}" ;;
+    ow) cfg[10]="${v}" ;;
+  esac
+done <"${SRCFILE}"
+
+result=""
+
+for i in "${!FT_CODES[@]}"; do
+  fg=''
+  bg=''
+  IFS=':' read -r fg bg <<<"${cfg[$i]}"
+
+  # NOTE: Intentionally unquote array index keys to make the code compatible
+  # with Zsh, as Zsh treats the quotes around a string literal or a parameter
+  # expansion within a pair of square brackets (e.g., `["${fg}"]`)  as part of
+  # the index key.
+
+  if [[ "${fg}" =~ ^[0-9]+$ ]] && ((fg >= 0 && fg < 16)); then
+    result+="${COLOR_CODES[${fg}]}"
+  else
+    result+="x"
+  fi
+
+  if [[ "${bg}" =~ ^[0-9]+$ ]] && ((bg >= 0 && bg < 16)); then
+    result+="${COLOR_CODES[${bg}]}"
+  else
+    result+="x"
+  fi
+done
+
+# Use a simple guard to validate the result before exporting it.
+[[ ${#result} -eq 22 ]] || exit 1
+
+printf "export LSCOLORS=%s" "${result}" >"${CACHE}"

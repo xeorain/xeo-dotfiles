@@ -1,0 +1,28 @@
+# Main user configuration for Ghostty.
+#
+# Copyright (c) 2026 Jerry Xeo
+
+app-notifications = no-clipboard-copy
+
+## Mouse
+mouse-hide-while-typing = true
+mouse-scroll-multiplier = 1
+
+## Shell integration
+shell-integration = detect
+# For an SSH session, attempt to install Ghostty's terminfo to the remote host
+# if it is found missing. If the attempt fails, set the TERM environment
+# variable to 'xterm-256color' for compatibility.
+shell-integration-features = ssh-terminfo,ssh-env
+
+# Load OS-specific configuration file.
+# ostype.conf is a symlink to either linux.conf or macos.conf.
+config-file = ?ostype.conf
+
+## Theme
+# Set cursor color to the inverse of the foreground color instead of the color
+# specified by the color theme. This is useful for TUI applications (e.g., vim)
+# using a color theme which is incompatible with the terminal's background.
+cursor-invert-fg-bg = true
+
+# vim:ft=conf:fileencoding=utf-8:foldmethod=marker

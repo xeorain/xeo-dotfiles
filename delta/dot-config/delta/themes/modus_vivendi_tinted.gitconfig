@@ -1,0 +1,16 @@
+; SPDX-License-Identifier: GPL-3.0-only
+; Modus Themes for Delta
+; Auto generated with https://github.com/miikanissi/modus-themes.nvim/blob/master/lua/modus-themes/extras/delta.lua
+[delta]
+  syntax-theme                  = "modus_vivendi_tinted"
+  minus-style                   = syntax "#4f1127"
+  minus-non-emph-style          = syntax "#380a19"
+  minus-emph-style              = syntax "#781a3a"
+  line-numbers-minus-style      = "#ffbfbf"
+  plus-style                    = syntax "#003a2f"
+  plus-non-emph-style           = syntax "#002922"
+  plus-emph-style               = syntax "#035542"
+  line-numbers-plus-style       = "#a0e0a0"
+  line-numbers-zero-style       = "#989898"
+
+# vim:ft=gitconfig

@@ -1,0 +1,33 @@
+# SPDX-License-Identifier: MIT
+#
+# Copyright (c) 2026 Jerry Xeo
+#
+# A ZLE widget that switches a job between foreground and background quickly.
+
+[[ -v _z4x_tty_fd ]] || return
+
+# NOTE: Use `BUFFER='fg'` and `zle .accept-line`, instead of directly executing
+# `fg`, to inject 'fg' into the Zsh command line so that Zsh can execute `fg` as
+# if you manually type the `fg` and press Enter, thus allowing Zsh to handle the
+# terminal state transitionts properly.
+if [[ ${#BUFFER} -eq 0 ]]; then
+  (( ${#jobtexts} )) || return
+  local bg_job="$(jobtexts[${(k)jobtexts[(I)-1]}])"
+  case "$bg_job" in
+   nc|ncat|netcat|resize-netcat-listener|rnc)
+      terminal-size-clip <&$_z4x_tty_fd
+      stty raw -echo <&$_z4x_tty_fd
+      fg
+      BUFFER='fg'
+      zle .accept-line
+      ;;
+    *)
+      BUFFER='fg'
+      zle .accept-line
+      ;;
+  esac
+else
+  zle push-input
+fi
+
+# vim:ft=zsh
