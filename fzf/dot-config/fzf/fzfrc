@@ -1,0 +1,15 @@
+# Global user configuration for fzf.
+#
+# Copyright (c) 2026 Jerry Xeo
+
+--prompt='∷ '
+--pointer='▶ '
+--marker=⇒
+
+# NOTE: Do not hard-code the preview and preview window formats in this file.
+# Otherwise, fixed values could break the fzf-based completion layouts in some
+# Zsh configurations where previews are dynamically calculated or even disabled.
+#--preview='echo {2..}'
+#--preview-window='wrap:6:down'
+
+# vim:ft=conf

@@ -1,0 +1,265 @@
+#!/bin/bash
+# SPDX-License-Identifier: MIT
+#
+# Copyright (c) 2026 Jerry Xeo
+#
+# A wrapper script that records audio from a selected source into a WAVE file.
+#
+# Requires:     pipewire-utils, pulseaudio-utils, rofi (>= 2.0) or rofi-wayland,
+#               fzf (for text console)
+# Recommends:   libnotify
+
+# Prevent the script from being sourced.
+[[ "${BASH_SOURCE[0]}" = "$0" ]] || exit
+
+set -uo pipefail
+shopt -u expand_aliases
+
+XEO_AUDREC_PROG="$(basename -- "$0")"
+XEO_AUDREC_VER='0.1.0'
+XEO_AUDREC_PIDFILE="${XDG_RUNTIME_DIR:-/tmp}/${XEO_AUDREC_PROG}-${EUID}-${XDG_SESSION_ID:-$(cat /proc/self/sessionid)}.pid"
+readonly XEO_AUDREC_PROG XEO_AUDREC_VER XEO_AUDREC_PIDFILE
+
+is_on_tty() {
+  [ "${XDG_SESSION_TYPE:-}" = 'tty' ]
+}
+
+print_hint() {
+  printf "Try '%s --help' for more information\n" "${XEO_AUDREC_PROG}"
+}
+
+print_version() {
+  printf "%s version %s\n" "${XEO_AUDREC_PROG}" "${XEO_AUDREC_VER}"
+}
+
+say() {
+  printf '%s: %s\n' "${XEO_AUDREC_PROG}" "$1"
+}
+
+die() {
+  say "$1" >&2
+  exit "${2:-1}"
+}
+
+die_with_hint() {
+  say "$1" >&2
+  print_hint >&2
+  exit "${2:-1}"
+}
+
+check_cmd() {
+  command -v "$1" >/dev/null 2>&1
+}
+
+need_cmd() {
+  check_cmd "$1" || die "cannot find command '$1'"
+}
+
+notify() {
+  ! is_on_tty \
+    && check_cmd notify-send \
+    && notify-send -r 777 -t 3300 -u low -a "${XEO_AUDREC_PROG}" "${XEO_AUDREC_PROG}" "$1"
+}
+
+select_audio_source() {
+  local _srcs
+  # INFO: Prefer `pactl` over `pw-dump`, as the output of `pactl` is much easier
+  # to parse.
+  _srcs="$(pactl list sources short | cut -f2)"
+  # _srcs="$(
+  #   pw-dump --color=never \
+  #     | jq -r '.[]
+  #       | select(.type? == "PipeWire:Interface:Node")
+  #       | .info?.props?
+  #       | select(. != null)
+  #       | if ( .["media.class"] // "" | test("source"; "i") ) then
+  #           .["node.name"]
+  #         elif ( .["media.class"] // "" | test("sink"; "i") ) then
+  #           .["node.name"] + ".monitor"
+  #         else
+  #           empty
+  #         end' \
+  #     | sort
+  # )"
+  [ -n "${_srcs:-}" ] || return 1
+
+  if [ "$(wc -l <<<"${_srcs}")" = 1 ]; then  # single source
+    aud_src="${_srcs}"
+  else
+    if ! is_on_tty; then
+      aud_src="$(rofi -dmenu -p "[${XEO_AUDREC_PROG}] choose source " -theme-str 'listview{fixed-height:false;}' <<<"${_srcs}")"
+    else
+      aud_src="$(fzf --prompt "[${XEO_AUDREC_PROG}] choose source" <<<"${_srcs}")"
+    fi
+  fi
+  [ -n "${aud_src:-}" ] || return 1
+}
+
+validate_audio_source() {
+  pactl list sources short | cut -f2 | grep -q "^$1"
+}
+
+precheck() {
+  need_cmd pactl
+  need_cmd pw-record
+  if ! is_on_tty; then
+    need_cmd rofi
+  else
+    need_cmd fzf
+  fi
+}
+
+ensure_singleton() {
+  local _pid
+  if [ -f "${XEO_AUDREC_PIDFILE}" ]; then
+      _pid="$(cat "${XEO_AUDREC_PIDFILE}")"
+      if [ -n "${_pid:-}" ] && kill -0 "${_pid}" >/dev/null 2>&1; then
+        die "another '${XEO_AUDREC_PROG}' instance is already running"
+      else
+        rm -f "${XEO_AUDREC_PIDFILE}"
+      fi
+  fi
+}
+
+confirm() {
+  local _input=$'Yes\nNo'
+  local _confirm
+  if ! is_on_tty; then
+    _confirm="$(rofi -dmenu \
+                     -p "[${XEO_AUDREC_PROG}] start recording?" \
+                     -theme-str 'listview{lines:2;}' <<<"${_input}")"
+  else
+    _confirm="$(fzf --prompt "[${XEO_AUDREC_PROG}] start recording?" <<<"${_input}")"
+  fi
+  [ "${_confirm:-}" = 'Yes' ] || return 1
+}
+
+make_outfile() {
+  local _xdg_mus_dir _outdir
+  _xdg_mus_dir="$(xdg-user-dir MUSIC)"
+  if [ "${_xdg_mus_dir:-${HOME}}" = "${HOME}" ]; then
+    _outdir="${HOME}/Music/Recordings"
+  else
+    _outdir="${_xdg_mus_dir}/Recordings"
+  fi
+  [ -d "${_outdir}" ] || mkdir -p "${_outdir}" || return $?
+  outfile="${_outdir}/audio-recording-$(date +%Y%m%d-%H%M%S).wav"
+}
+
+on_exit() {
+  local _rc=$?
+  trap - EXIT INT TERM
+
+  if [ -n "${pwr_pid:-}" ]; then
+    kill "${pwr_pid}" 2>/dev/null
+    [ -z "${QUIET:-}" ] && notify "Stopped on ${aud_src}"
+  fi
+  if [ -f "${XEO_AUDREC_PIDFILE}" ]; then
+    rm -f "${XEO_AUDREC_PIDFILE}"
+  fi
+
+  exit "${_rc}"
+}
+
+usage() {
+  cat <<EOF
+Usage: ${XEO_AUDREC_PROG} [OPTION]... [<FILE>]
+Record audio from a selected source into a WAVE file.
+
+Arguments:
+  <FILE>
+      save recording to <FILE>; if <FILE> is -, write the recording to stdout.
+      If not present, a file will automatically be created in
+      "\${XDG_MUSIC_DIR/Recordings" (or ~/Music/Recordings if XDG_MUSIC_DIR is
+      not set) with a timestamped filename
+
+Options:
+  -s, --source=[SOURCE]
+          specify audio source
+  -q, --quiet
+          disable notification
+      --help
+          print this help and exit
+  -V, --version
+          output version information and exit
+EOF
+}
+
+main() {
+  local _args
+  if ! _args=$(getopt --options qs:V \
+      --longoptions help,quiet,source:,version \
+      --name "${XEO_AUDREC_PROG}" -- "$@"); then
+    print_hint >&2
+    exit 1
+  fi
+  eval set -- "${_args}"
+  unset _args
+
+  while true; do
+    case "$1" in
+      -q|--quiet)
+        readonly QUIET=1
+        ;;
+      -s|--source)
+        validate_audio_source "$2" || die "invalid audio source '$2'"
+        aud_src="$2"
+        shift
+        ;;
+      --help)
+        usage
+        exit 0
+        ;;
+      -V|--version)
+        print_version
+        exit 0
+        ;;
+      --)
+        shift
+        break
+        ;;
+    esac
+    shift
+  done
+
+  precheck
+  ensure_singleton
+
+  [ -n "${aud_src:-}" ] || select_audio_source || exit $?
+
+  confirm || exit $?
+
+  case "${1:-}" in
+    '')
+      make_outfile || exit $?
+      ;;
+    *)
+      outfile="$1"
+      ;;
+  esac
+
+  [ -z "${QUIET:-}" ] && notify "Started on ${aud_src}"
+
+  trap 'on_exit' EXIT
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
+
+  case "${aud_src}" in
+    *.monitor)
+      pw-record --target "${aud_src%.monitor}" \
+                        -P '{stream.capture.sink=true}' "${outfile}" &
+      pwr_pid=$!
+      ;;
+    *)
+      pw-record --target "${aud_src}" "${outfile}" &
+      pwr_pid=$!
+      ;;
+  esac
+  [ -n "${pwr_pid:-}" ] || exit 1
+
+  printf '%s' "${pwr_pid}" >"${XEO_AUDREC_PIDFILE}" || exit $?
+
+  wait "${pwr_pid}" 2>/dev/null
+}
+
+main "$@"

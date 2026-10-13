@@ -1,0 +1,93 @@
+# SPDX-License-Identifier: MIT
+#
+# Copyright (c) 2026 Jerry Xeo
+#
+# Configuration for interactive Zsh sessions.
+
+# --- Base environment for interactive sessions ----------------------------{{{
+_XEO_SH_CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/shell"
+
+# Load shared aliases and functions from the base environment.
+[[ -s "$_XEO_SH_CONFIG_DIR/aliases.sh" ]] && . "$_XEO_SH_CONFIG_DIR/aliases.sh"
+[[ -s "$_XEO_SH_CONFIG_DIR/functions.sh" ]]  && . "$_XEO_SH_CONFIG_DIR/functions.sh"
+# }}}
+
+# --- z4x settings and initialization --------------------------------------{{{
+case "$OSTYPE" in
+  linux*)
+    # Keyboard type: 'mac' or 'pc'.
+    zstyle ':z4x:bindkey' keyboard 'pc'
+
+    # Optionally load color scheme for GNU `ls`.
+    [[ -s "$_XEO_SH_CONFIG_DIR/dircolors" ]] \
+      && source <(command dircolors -b "$_XEO_SH_CONFIG_DIR/dircolors")
+    ;;
+  darwin*)
+    # Keyboard type: 'mac' or 'pc'.
+    zstyle ':z4x:bindkey' keyboard 'mac'
+    # Disallow using 'option' key as 'Alt' key on macos.
+    #zstyle "z4x:bindkey" macos-option-as-alt 'no'
+
+    # Optionally load color scheme for BSD `ls`.
+    #
+    # macOS uses the BSD `ls` that recognizes LSCOLORS which is incompatible
+    # with LS_COLORS used by the GNU `ls`. LSCOLORS has a much less supported
+    # file types than GNU's LS_COLORS. There is no equivalent program to GNU's
+    # `dircolors` that can generate the environment variable from a color scheme
+    # source file. `__xeo_export_bsd_lscolors()` is a bash function defined in
+    # ~/.config/shell/functions.sh that generates LSCOLORS from a custom color
+    # scheme source file (~/.config/shell/bsd_lscolorsrc), and caches the value
+    # of LSCOLORS in ~/.config/shell/bsd_lscolors to speed up subsequent
+    # loading.
+    [[ -v functions[__xeo_export_bsd_lscolors] ]] \
+      && __xeo_export_bsd_lscolors "$_XEO_SH_CONFIG_DIR/bsd_lscolorsrc" \
+                                   "$_XEO_SH_CONFIG_DIR/bsd_lscolors"
+    ;;
+esac
+unset _xeo_sh_config_dir
+
+# Mark up shell's output with semantic information.
+zstyle ':z4x:' term-shell-integration 'yes'
+
+# Recursively traverse directories when TAB-completing files.
+zstyle ':z4x:fzf-complete' recurse-dirs 'no'
+
+# Enable vi mode before z4x initialization.
+zstyle ':z4x:' vi-mode 'no'
+
+# Initialize z4x.
+z4x init || return
+# }}}
+
+# --- Extra key bindings ---------------------------------------------------{{{
+# Key bindings for executing xeo extra environment utilities, requiring
+# ~/.local/bin/xeo-util and internal helper programs in the ~/.local/libexec/xeo
+# directory.
+if [[ -v commands[xeo-util] ]]; then
+  # Switch the theme mode between 'dark' and 'light' for some CLI/TUI
+  # applications to match the terminal background.
+  z4x bindkey -s "\C-uxeo-util switch-theme-mode\n" 'Ctrl+X Ctrl+A'
+  # Switch the background style between 'dark' and 'light' for Vim/Neovim.
+  z4x bindkey -s "\C-uxeo-util switch-vim-bg\n" 'Ctrl+X Ctrl+B'
+fi
+# }}}
+
+# --- Extra autoload functions ---------------------------------------------{{{
+autoload -Uz zmv
+# }}}
+
+# --- Extra plugins --------------------------------------------------------{{{
+z4x load plugins/bd
+# }}}
+
+# --- Local extended configuration -----------------------------------------{{{
+# Include extended environment variables, aliases, functions, file sourcing
+# (e.g., ROS setup script, conda init script, etc).
+if [ -s "$ZDOTDIR/.zshrc.local" ]; then
+  . "$ZDOTDIR/.zshrc.local"
+elif [ -s "$HOME/.zshrc.local" ]; then
+  . "$HOME/.zshrc.local"
+fi
+# }}}
+
+# vim:ft=zsh:foldmethod=marker:foldlevel=0

@@ -1,0 +1,59 @@
+#!/bin/bash
+# SPDX-License-Identifier: MIT
+#
+# Copyright (c) 2026 Jerry Xeo
+#
+# Control volumes, optionally showing the current level in a notification.
+#
+# Usage: volume-helper <TARGET> <VOLUME> [<LIMIT>]
+#
+# Arguments:
+#   TARGET  Specify audio target ID
+#   VOLUME  Specify volume; see Volume Formats below
+#   LIMIT   Specify the volume upper limit (default 1.0, i.e., 100%)
+#
+# Volume formats:
+#   N%    Set volume to N%
+#   N%+   Raise volume by N%
+#   N%-   Lower volume by N%
+#   mute  Mute
+#
+# Requires:     wireplumber, wob
+
+if [ $# -lt 2 ] || ! command -v wpctl >/dev/null 2>&1; then
+  exit 1
+fi
+
+tgt="$1"
+vol="$2"
+[ -n "$3" ] && limit="$3" || limit='1.0'
+
+case "${vol}" in
+  mute)
+    wpctl set-mute "${tgt}" toggle 2>/dev/null
+    ;;
+  *%*)
+    wpctl set-volume -l "${limit}" "${tgt}" "${vol}" 2>/dev/null
+    ;;
+  *)
+    exit 1
+esac
+
+# Get volume info
+volinfo="$(wpctl get-volume "${tgt}")" || exit 1
+read -r _ vol muted <<EOF
+${volinfo}
+EOF
+# Convert float to percentage integer presentatin
+vol=$((${vol%.*} * 100 + ${vol#*.}))
+
+# Use `notify-send` to display volume level (use `wob` instead)
+# command -v notify-send >/dev/null 2>/dev/null \
+#   && notify-send -u low -t 800 \
+#                  --hint string:x-canonical-private-synchronous:VOL \
+#                  --hint "int:value:${vol}" \
+#                  --transient "Volume: ${vol}%${muted:+ ${muted}}"
+
+# Use wob to display volume level
+[ -n "${muted}" ] && style='muted' || style='volume'
+printf '%s %s\n' "${vol}" "${style}" >"${XDG_RUNTIME_DIR:-/tmp}/wob-${EUID}-${XDG_SESSION_ID:-$(cat /proc/self/sessionid)}.fifo"

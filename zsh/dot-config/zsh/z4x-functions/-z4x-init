@@ -1,0 +1,63 @@
+# SPDX-License-Identifier: MIT
+#
+# Copyright (c) 2020 Roman Perepelitsa
+# Copyright (c) 2026 Jerry Xeo
+#
+# z4x initialization.
+
+autoload -Uz add-zsh-hook || return
+
+# TREE_COLORS, used by GNU `tree`, looks awful with underlined text, so turn it
+# off.
+export TREE_COLORS="${LS_COLOR//04;}"
+
+# Perform initialization for WSL (Windows Subsystem for Linux) as needed.
+if [[ "$OSTYPE" == linux-* && -r '/proc/version' \
+    && ( -v commands[cmd.exe] || -e '/mnt/c/Windows/System32/cmd.exe' ) ]]; then
+  -z4x-init-wsl
+fi
+
+# READNULLCMD is a Zsh parameter that defines what program should run when you
+# feed a file into an empty input redirection, e.g., `< .zshrc`.
+if (( ${+commands[less]} )); then
+  READNULLCMD=less
+elif (( ${+commands[more]} )); then
+  READNULLCMD=more
+elif (( ${+commands[cat]} )); then
+  READNULLCMD=cat
+fi
+
+TIMEFMT='user=%U system=%S cpu=%P total=%*E'  # output format of `time` reserved word
+
+: ${DIRSTACKSIZE:=10000}  # Directory history stack size
+
+# Prepare z4x itself, including compiling all core functions, and generating a
+# z4x-specific `compinit` implementation. If any core function or the completion
+# implementation changes, you can manually run the command below to perform the
+# preparation without having to removing
+# $ZDOTDIR/z4x-functions/-z4x-compinit-impl or $ZDOTDIR/z4x.zsh:
+#
+#     z4x prepare self
+#
+# NOTE: In Zsh, `[[ file1 -nt file2 ]]` evaluates to false if either file1 or
+# file2 doesn't exist, which is counter-intuitive. The negated expression
+# `[[ ! file2 -nt file1 ]]` is a trick that covers both conditions: file1 is
+# newer than file2 and file2 doesn't exist.
+if [[ ! -e $ZDOTDIR/z4x-functions/-z4x-compinit-impl ||
+      ! $ZDOTDIR/z4x.zsh.zwc -nt $ZDOTDIR/z4x.zsh ]]; then
+  -z4x-prepare-self || return
+fi
+
+# Initialize ZLE
+if (( _z4x_zle )); then
+  -z4x-init-zle || return
+else
+  -z4x-cmd-bindkey() {}
+  function compdef() {}
+  function complete() {}
+fi
+
+function compinit() {}
+function bashcompinit() {}
+
+# vim:ft=zsh:foldmethod=marker:foldlevel=0

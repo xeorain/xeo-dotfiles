@@ -1,0 +1,25 @@
+-- SPDX-License-Identifier: MIT
+--
+-- Copyright (c) 2026 Jerry Xeo
+--
+-- Text overlay configutration for swayimg (v5.0.x) slideshow mode.
+
+swayimg.slideshow.set_text("topleft", {
+  "{name}",
+  "{format}",
+  "{sizehr}",
+  "{time}",
+  "{meta.Exif.Photo.DateTimeOriginal}",
+  "{meta.Exif.Image.Model}"
+})
+swayimg.slideshow.set_text("topright", {
+  "{list.index}/{list.total}"
+})
+swayimg.slideshow.set_text("bottomleft", {
+  "{frame.index}/{frame.total}",
+  "{frame.width}x{frame.height}",
+  "{scale}"
+})
+swayimg.slideshow.set_text("bottomright", {
+  "{path}"
+})

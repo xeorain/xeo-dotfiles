@@ -1,0 +1,42 @@
+#!/bin/sh
+# SPDX-License-Identifier: MIT
+#
+# Copyright (c) 2026 Jerry Xeo
+#
+# Switch audio profiles and send notification.
+#
+# Requires:     jq, libnotify, pipewire-utils, rofi (>= 2.0) or rofi-wayland
+
+# NOTE: `wpctl` accepts integers as arguments:
+#   wpctl <device_id> <profile_index>
+prog="$(basename "$0")"
+pw_state="$(pw-dump)"
+
+dev_id="$(printf '%s' "${pw_state}" | jq -r '
+  .[]
+  | select(.type == "PipeWire:Interface:Device")
+  | .id')"
+
+profiles="$(printf '%s' "${pw_state}" | jq -r --argjson dev_id "${dev_id}" '
+  .[]
+  | select(.type == "PipeWire:Interface:Device" and .id == $dev_id)
+  | .info.params.EnumProfile[]?
+  | select(.name | startswith("output:"))
+  | .description')"
+
+choice="$(printf '%s' "${profiles}" \
+  | rofi -dmenu -p "[${prog}] select an profile")"
+[ -n "${choice}" ] || exit 0
+
+profile_idx="$(printf '%s' "${pw_state}" | jq -r --argjson dev_id "${dev_id}" --arg desc "${choice}" '
+  .[]
+  | select(.type == "PipeWire:Interface:Device" and .id == $dev_id)
+  | .info.params.EnumProfile[]?
+  | select(.description == $desc)
+  | .index')"
+
+if [ -n "${profile_idx}" ]; then
+  wpctl set-profile "${dev_id}" "${profile_idx}"
+fi
+
+notify-send -r 555 -t 1100 -u low "${prog}" "${choice}"

@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: MIT
+#
+# Copyright (c) 2020 Roman Perepelitsa
+#
+# z4x-accept-line is just like accept-line except that it inserts \n when
+# accept-line would result in a parse error or PS2.
+
+if -z4x-is-valid-list "$PREBUFFER$BUFFER"; then
+  zle accept-line
+else
+  LBUFFER+=$'\n'
+fi
+
+# vim:ft=zsh

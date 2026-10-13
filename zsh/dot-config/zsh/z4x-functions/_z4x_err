@@ -1,0 +1,12 @@
+# SPDX-License-Identifier: MIT
+#
+# Copyright (c) 2020 Roman Perepelitsa
+
+local -i ret=$?
+eval "$_z4x_opt"
+print -Pru2 -- '%F{3}--- stack trace (most recent call first) --%f'
+print -lru2 -- '${funcfiletrace[@]}'
+print -Pru2 -- '%F{3}--- end of stack trace ---%f'
+return $(( ret ? ret : 1))
+
+# vim:ft=zsh

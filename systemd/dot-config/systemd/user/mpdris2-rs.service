@@ -1,0 +1,53 @@
+# A systemd user service unit for mpdris2-rs.
+#
+# See https://github.com/szclsya/mpdris2-rs/blob/trunk/misc/mpdris2-rs.service
+#
+# Requires:   mpd, mpdris2-rs (https://github.com/szclsya/mpdris2-rs)
+#
+# Copyright (c) 2026 Jerry Xeo
+
+[Unit]
+Description=MPDIRS v2.2 bridge for MPD (Rust Version)
+After=mpd.service
+Requires=mpd.service
+# When mpdris2-rs stops, send a stop signal to mpd
+PropagatesStopTo=mpd.service
+
+[Service]
+Type=dbus
+BusName=org.mpris.MediaPlayer2.mpd
+# The --host option is not supplied so that mpdris2-rs respects the MPD_HOST
+# environment variable. If MPD_HOST is not set, mpdris2-rs falls back to the
+# TCP socket on 6600 port.
+ExecStart=/usr/local/bin/mpdris2-rs --app-name MPD \
+    -t 3 -u 0 \
+    --notification-max-segment-len 32 \
+    --notification-body '%%title%%\n(%%artist%%)' \
+    --notification-body-paused '%%title%%\n(%%artist%%)'
+Restart=on-failure
+# Sandboxing
+ProtectSystem=strict
+ProtectProc=noaccess
+ReadWritePaths=%t/bus
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+ProtectKernelModules=yes
+PrivateDevices=yes
+ProtectHostname=yes
+ProtectClock=yes
+RestrictNamespaces=no
+NoNewPrivileges=yes
+RestrictSUIDSGID=yes
+MemoryDenyWriteExecute=yes
+SystemCallFilter=@system-service @basic-io @file-system @network-io @signal
+SystemCallArchitectures=native
+RuntimeDirectory=mpd
+RuntimeDirectoryPreserve=no
+RestrictRealtime=yes
+LockPersonality=yes
+
+[Install]
+WantedBy=default.target

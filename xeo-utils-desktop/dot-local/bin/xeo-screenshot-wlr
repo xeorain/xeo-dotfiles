@@ -1,0 +1,289 @@
+#!/bin/bash
+# SPDX-License-Identifier: MIT
+#
+# Copyright (c) 2026 Jerry Xeo
+#
+# A wrapper script that takes a screenshot of a selected region in wlroots
+# Wayland environments.
+#
+# This script cannot automatically capture the currently focused display or
+# window, because finding them in a Wayland session is compositor-specific.
+# However, the `--geom` and `--output` options exist to allow manually
+# specifying the geometry of the currently focused window or the name of the
+# active display output, which can be obtained via the public command-line
+# interface of a specific wlroots-compatible compositor, e.g., `swaymsg` for
+# Sway.
+#
+# Requires:     rofi (>= 2.0) or rofi-wayland, grim, slurp, wayland-utils,
+#               wl-clipboard, wlr-randr
+# Recommends:   libnotify
+
+# Prevent the script from being sourced.
+[[ "${BASH_SOURCE[0]}" = "$0" ]] || exit
+
+set -uo pipefail
+shopt -u expand_aliases
+
+XEO_SS_WLR_PROG="$(basename -- "$0")"
+readonly XEO_SS_WLR_PROG
+readonly XEO_SS_WLR_VER='0.1.0'
+
+print_hint() {
+  printf "Try '%s --help' for more information\n" "${XEO_SS_WLR_PROG}"
+}
+
+print_version() {
+  printf "%s version %s\n" "${XEO_SS_WLR_PROG}" "${XEO_SS_WLR_VER}"
+}
+
+say() {
+  printf '%s: %s\n' "${XEO_SS_WLR_PROG}" "$1"
+}
+
+die() {
+  say "$1" >&2
+  exit "${2:-1}"
+}
+
+die_with_hint() {
+  say "$1" >&2
+  print_hint >&2
+  exit "${2:-1}"
+}
+
+check_cmd() {
+  command -v "$1" >/dev/null 2>&1
+}
+
+check_wlroots() {
+  if ! { wayland-info | grep -q 'zwlr_output_manager'; } 2>/dev/null; then
+    die "not in a wlroots graphical session"
+  fi
+}
+
+need_cmd() {
+  check_cmd "$1" || die "cannot find command '$1'"
+}
+
+notify() {
+  check_cmd notify-send \
+    && notify-send -r 666 -t 3300 -u low -a "${XEO_SS_WLR_PROG}" "${XEO_SS_WLR_PROG}" "$1"
+}
+
+precheck() {
+  check_wlroots
+  need_cmd grim
+  need_cmd rofi
+  need_cmd slurp
+  need_cmd wl-copy
+  need_cmd wlr-randr
+}
+
+capture() {
+  if [ -z "${COPY_ONLY:-}" ]; then
+    if [ -z "${NEED_COPY:-}" ]; then
+      grim "${grim_opts[@]}" "${outfile}"
+    else
+      grim "${grim_opts[@]}" - \
+        | tee "${outfile}" \
+        | wl-copy --type image/png
+    fi
+    [ -s "${outfile}" ] \
+      && notify "region (${geom}) saved to '${outfile}'"
+  elif grim "${grim_opts[@]}" - | wl-copy --type image/png; then
+    notify "region (${geom}) copied to clipboard"
+  fi
+}
+
+get_all_disp_outputs() {
+  # Default behavior of grim, no options need to be set.
+  geom="all visible display outputs"
+}
+
+select_disp_output() {
+  geom="$(wlr-randr \
+    | grep '^[a-zA-Z0-9]' \
+    | rofi -dmenu \
+           -p "[${XEO_SS_WLR_PROG}] select a display output" \
+           -theme-str 'listview{fixed-height:false;}' \
+    | tr -d '()' \
+    | cut -d' ' -f-1)"
+  [ -n "${geom:-}" ] || return 1
+  grim_opts+=('-o' "${geom}")
+}
+
+select_rect_region() {
+  geom="$(slurp -d)"
+  [ -n "${geom:-}" ] || return 1
+  grim_opts+=('-g' "${geom}")
+}
+
+make_outfile() {
+  local _xdg_pic_dir _outdir
+  _xdg_pic_dir="$(xdg-user-dir PICTURES)"
+  if [ "${_xdg_pic_dir:-${HOME}}" = "${HOME}" ]; then
+    _outdir="${HOME}/Pictures/Screenshots"
+  else
+    _outdir="${_xdg_pic_dir}/Screenshots"
+  fi
+  [ -d "${_outdir}" ] || mkdir -p "${_outdir}" || return $?
+  outfile="${_outdir}/screenshot-$(date +%Y%m%d-%H%M%S%3N).png"
+}
+
+set_target() {
+  if [ -n "${tgt:-}" ] && [ "$1" != "${tgt}" ]; then
+    die_with_hint 'multiple targets not allowed'
+  fi
+  tgt="$1"
+}
+
+usage() {
+  cat <<EOF
+Usage: ${XEO_SS_WLR_PROG} [OPTION]... [<FILE>]
+Take a screenshot of a display output, a window, or an arbitrary rectangular
+region in wlroots Wayland environments.
+
+Arguments:
+  <FILE>
+      save screenshot to <FILE>; if <FILE> is -, pipe the screenshot to stdout;
+      if not present, a file will automatically be created in
+      "\$XDG_PICTURES_DIR/Screenshots" (or ~/Pictures/Screeshots if
+      XDG_PICTURES_DIR is not set) with a timestamped filename
+
+Options:
+      --copy-only
+          copy the screenshot to the system clipboard without saving it to a
+          regular file
+      --copy
+          copy the screenshot to the system clipboard while saving it to a
+          regular file; ignored when <FILE> is -
+  -g, --geom=GEOM
+          set the region to catpure directly by GEOM; when present, --target is
+          ignored; See GEOM format below
+  -o, --output=OUTPUT
+          set the display output to capture by OUTPUT; when present, --target is
+          ignored
+  -t, --target=TARGET
+          set the taget to be captured to TARGET; See all suppoted TARGETs below
+      --help
+          print this help and exit
+  -V, --version
+          output version information and exit
+
+The GEOM argument must be in form of '{X},{Y} {W}x{H}', where {X} and {Y} are
+the horizontal and vertical pixel coordiates of the top-left corner of a window,
+and {W} and {H} are the width and height of the window respectively.
+
+The TARGET argument can be any of the following:
+  aa  all visible display outputs combined (default)
+  ig  a manually selected rectangular region (by clicking and dragging)
+  io  a manually selected display output (via rofi)
+
+There is no universe way to implement the following targets as they reply on
+Wayland compositor implementation, but are left for users to indirectly achieve
+via a specific compositor API (e.g., swaymsg for Sway) together with the --geom
+or --output option:
+  ao  the currently focused display output
+  aw  the currently focused window
+  iw  a manually selected window
+EOF
+}
+
+main() {
+  local _args
+  if ! _args=$(getopt --options g:o:t:V \
+      --longoptions copy,copy-only,geom:,help,output:,target:,version \
+      --name "${XEO_SS_WLR_PROG}" -- "$@"); then
+    print_hint >&2
+    exit 1
+  fi
+  eval set -- "${_args}"
+  unset _args
+
+  while true; do
+    case "$1" in
+      --copy)
+        readonly NEED_COPY=1
+        ;;
+      --copy-only)
+        readonly COPY_ONLY=1
+        ;;
+      -g|--geom)
+        if ! [[ "$2" =~ ^[0-9]+,[0-9]+[[:space:]]+[0-9]+x[0-9]+$ ]]; then
+          die_with_hint "invalid $1 argument '$2'"
+        fi
+        geom="$2"
+        grim_opts+=('-g' "${geom}")
+        shift
+        ;;
+      -o|--output)
+        geom="$2"
+        grim_opts+=('-o' "${geom}")
+        shift
+        ;;
+      -t|--target)
+        case "$2" in
+          aa|ig|io)
+            set_target "$2"
+            ;;
+          *)
+            die_with_hint "invalid $1 argument '$2'"
+            ;;
+        esac
+        shift
+        ;;
+      --help)
+        usage
+        exit 0
+        ;;
+      -V|--version)
+        print_version
+        exit 0
+        ;;
+      --)
+        shift
+        break
+        ;;
+    esac
+    shift
+  done
+
+  precheck
+
+  if [ -z "${COPY_ONLY:-}" ]; then
+    case "${1:-}" in
+      '')
+        make_outfile || exit $?
+        ;;
+      -)
+        outfile="$1"
+        # Ignore --copy option when output file is STDOUT.
+        unset NEED_COPY
+        ;;
+      *)
+        outfile="$1"
+        ;;
+    esac
+  fi
+
+  # Select target
+  if [ -z "${geom:-}" ]; then
+    case "${tgt:-aa}" in
+      aa)  # automatic all visible display outputs
+        get_all_disp_outputs
+        ;;
+      ig)  # interactive region geometry
+        select_rect_region || exit $?
+        ;;
+      io)  # interactive display output
+        select_disp_output || exit $?
+        ;;
+    esac
+  fi
+
+  capture
+}
+
+grim_opts=()
+
+main "$@"

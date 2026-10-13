@@ -1,0 +1,18 @@
+# The system user servcie for cleaning up the xeo extra environment file.
+#
+# It is supposed to work universally across Linux distros that usses systemd.
+#
+# Requires:   ~/.config/systemd/user/graphical-session.target.d/xeo-extra-env-cleanup.conf
+#
+# Copyright (c) 2026 Jerry Xeo
+
+[Unit]
+Description=Clean Up Xeo Extra Environment File
+DefaultDependencies=no
+BindsTo=graphical-session.target
+ConditionEnvironment=XEO_SH_EXTRA_ENV_FILE
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStop=/bin/sh -c '[ -f "${XEO_SH_EXTRA_ENV_FILE}" ] && rm -f "${XEO_SH_EXTRA_ENV_FILE}" || echo "${XEO_SH_EXTRA_ENV_FILE}"'

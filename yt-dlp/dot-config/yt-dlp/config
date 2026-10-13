@@ -1,0 +1,29 @@
+# User configuration for yt-dlp.
+#
+# Copyright (c) 2026 Jerry Xeo
+
+--embed-metadata
+
+# Using `yt-dlp` to access YouTube through a proxy may cause it to be flagged as
+# a bot, which in turn forces you to sign in. The --cookies-from-browser option
+# allows `yt-dlp` to grab the cookies from a browser where you are signed in to
+# YouTube to complete authentication.
+#
+# The n-parameter (or simply n) challenge, a specialized security mechanism that
+# YouTube uses to prevent unauthorized video downloads and perform bot detection
+# on the client side, is delivered to the web client in the form of JavaScript.
+# The client must solve the n-parameter challenge specific to a YouTube video to
+# obtain permission to access it. `yt-dlp` requires an external JavaScript
+# runtime to execute its EJS component to solve the challenge. If you are using
+# a JavaScript runtime other than Deno, you must supply the --js-runtime option
+# to `yt-dlp` to specify the JavaScript runtime to use.
+#
+# See `man yt-dlp` for all supported web browsers and JavaScript runtimes.
+#
+# References:
+# - https://github.com/yt-dlp/yt-dlp/wiki/Extractors#youtube
+# - https://github.com/yt-dlp/yt-dlp/wiki/PO-Token-Guide
+# - https://github.com/yt-dlp/yt-dlp/wiki/EJS
+--js-runtimes=node
+
+# vim:ft=conf

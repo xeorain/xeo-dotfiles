@@ -1,0 +1,450 @@
+#!/bin/bash
+# SPDX-License-Identifier: MIT
+#
+# Copyright (c) 2026 Jerry Xeo
+#
+# A wrapper script using `wf-recorder` to record screen, with optional audio, in
+# wlroots Wayland environments.
+#
+# Typical CRF for desktop screen recording with H.264 codec:
+#
+# | Target quality    | 4K@30fps | 4K@60fps | Best use case                            |
+# | ----------------- | -------- | -------- | ---------------------------------------- |
+# | Near-lossless     | 15 – 17  | 14 – 16  | Professional editing, pixel-perfect text |
+# | Balanced*         | 19 – 21  | 18 – 20  | Best for standard 4K screen recording    |
+# | Storage efficient | 23 – 25  | 24 – 26  | Long recordings where minor blur is okay |
+#
+# Typical CRF for desktop screen recording with H.265 codec:
+#
+# | Target quality    | 4K@30fps | 4K@60fps | Best Use Case                                        |
+# | ----------------- | -------- | -------- | ---------------------------------------------------- |
+# | Near-lossless     | 18 – 19  | 16 – 18  | Professional editing, pixel-perfect 4K text          |
+# | High quality      | 20 – 21  | 19 – 20  | High-res tutorials with sharp terminal/IDE text      |
+# | Balanced*         | 22 – 23  | 21 – 22  | Best for standard 4K screen recording                |
+# | Storage efficient | 25 – 26  | 24 – 25  | Long meetings or coding with manageable file sizes   |
+# | Smallest File     | 28+      | 28+      | Archives where storage is more critical than clarity |
+#
+# The value of CRF is currently fixed to 22, which is a common value for 4k
+# screen recording with H.265 (HEVC) codec, and is also acceptable for H.264
+# codec.
+#
+# Requires:     jq, pipewire-pulseaudio, pulseaudio-utils, slurp, wayland-utils,
+#               wf-recorder, wlr-randr, rofi (>= 2.0) or rofi-wayland
+# Recommends:   libnotify
+#
+# NOTE: wf-recorder expects a PulseAudio device name for audio source.
+
+# Prevent the script from being sourced.
+[[ "${BASH_SOURCE[0]}" = "$0" ]] || exit
+
+set -uo pipefail
+shopt -u expand_aliases
+
+XEO_SCRREC_WLR_PROG="$(basename -- "$0")"
+XEO_SCRREC_WLR_VER='0.1.0'
+XEO_SCRREC_WLR_PIDFILE="${XDG_RUNTIME_DIR:-/tmp}/${XEO_SCRREC_WLR_PROG}-${EUID}-${XDG_SESSION_ID:-$(cat /proc/self/sessionid)}.pid"
+readonly XEO_SCRREC_WLR_PROG XEO_SCRREC_WLR_VER XEO_SCRREC_WLR_PIDFILE
+
+print_hint() {
+  printf "Try '%s --help' for more information\n" "${XEO_SCRREC_WLR_PROG}"
+}
+
+print_version() {
+  printf "%s version %s\n" "${XEO_SCRREC_WLR_PROG}" "${XEO_SCRREC_WLR_VER}"
+}
+
+say() {
+  printf '%s: %s\n' "${XEO_SCRREC_WLR_PROG}" "$1"
+}
+
+die() {
+  say "$1" >&2
+  exit "${2:-1}"
+}
+
+die_with_hint() {
+  say "$1" >&2
+  print_hint >&2
+  exit "${2:-1}"
+}
+
+check_cmd() {
+  command -v "$1" >/dev/null 2>&1
+}
+
+need_cmd() {
+  check_cmd "$1" || die "cannot find command '$1'"
+}
+
+notify() {
+  check_cmd notify-send \
+    && notify-send -r 666 -t 3300 -u low -a "${XEO_SCRREC_WLR_PROG}" "${XEO_SCRREC_WLR_PROG}" "$1"
+}
+
+check_wlroots() {
+  if ! { wayland-info | grep -q 'zwlr_output_manager'; } 2>/dev/null; then
+    die "not in a wlroots graphical session"
+  fi
+}
+
+precheck() {
+  check_wlroots
+  need_cmd pactl
+  need_cmd rofi
+  need_cmd slurp
+  need_cmd wf-recorder
+  need_cmd wlr-randr
+}
+
+ensure_singleton() {
+  local _pid
+  if [ -f "${XEO_SCRREC_WLR_PIDFILE}" ]; then
+      _pid="$(cat "${XEO_SCRREC_WLR_PIDFILE}")"
+      if [ -n "${_pid:-}" ] && kill -0 "${_pid}" 2>/dev/null; then
+        die "another '${XEO_SCRREC_WLR_PROG}' instance is already running"
+      else
+        rm -f "${XEO_SCRREC_WLR_PIDFILE}"
+      fi
+  fi
+}
+
+validate_video_crf() {
+  awk "BEGIN {exit !($1 >= 0 && $1 <= 51)}" 2>/dev/null
+}
+
+validate_video_resolution() {
+  [[ "$1" =~ ^[[:digit:]]{1,4}x[[:digit:]]{1,4}$ ]]
+}
+
+select_disp_output() {
+  local _outlist
+  _outlist="$(wf-recorder --list-output | cut -d' ' -f3)"
+  [ -n "${_outlist:-}" ] || return 1
+
+  if [ "$(wc -l <<<"${_outlist}")" = 1 ]; then
+    geom="${_outlist}"
+  else
+    geom="$(rofi -dmenu \
+                 -p "[${XEO_SCRREC_WLR_PROG}] choose a display output" \
+                 -theme-str 'listview{fixed-height:false;}' <<<"${_outlist}")"
+  fi
+  [ -n "${geom:-}" ] || return 1
+  wfr_args+=('--output' "${geom}")
+}
+
+select_rect_region() {
+  geom="$(slurp)"
+  [ -n "${geom:-}" ] || return 1
+  wfr_args+=('--geometry' "${geom}")
+}
+
+select_audio_source() {
+  local _srcs
+  # INFO: Prefer `pactl` over `pw-dump`, as the output of `pactl` is much easier
+  # to parse.
+  _srcs="$(pactl list sources short | cut -f2)"
+  # _srcs="$(
+  #   pw-dump --color=never \
+  #     | jq -r '.[]
+  #       | select(.type? == "PipeWire:Interface:Node")
+  #       | .info?.props?
+  #       | select(. != null)
+  #       | if ( .["media.class"] // "" | test("source"; "i") ) then
+  #           .["node.name"]
+  #         elif ( .["media.class"] // "" | test("sink"; "i") ) then
+  #           .["node.name"] + ".monitor"
+  #         else
+  #           empty
+  #         end' \
+  #     | sort
+  # )"
+  [ -n "${_srcs:-}" ] || return 1
+
+  if [ "$(wc -l <<<"${_srcs}")" = 1 ]; then  # single source
+    aud_src="${_srcs}"
+  else
+    aud_src="$(rofi -dmenu \
+                    -p "[${XEO_SCRREC_WLR_PROG}] choose audio source" \
+                    -theme-str 'listview{fixed-height:false;}' <<<"${_srcs}")"
+  fi
+  [ -n "${aud_src:-}" ] || return 1
+
+  wfr_args+=("-audio=${aud_src}")
+}
+
+validate_audio_source() {
+  pactl list sources short | cut -f2 | grep -q "^$1"
+}
+
+set_geometry() {
+  [[ "$1" =~ ^[0-9]+,[0-9]+[[:space:]]+[0-9]+x[0-9]+$ ]] || return 1
+  geom="$1"
+  wfr_args+=('--geometry' "$1")
+}
+
+set_disp_output() {
+  wlr-randr | grep -q -m1 "^$1 " || return 1
+  geom="$1"
+  wfr_args+=('--output' "$1")
+}
+
+run_recorder() {
+  wfr_args+=(
+    '--framerate' "${fps}"
+    '--codec' "${codec}"
+    '--codec-param' 'color_range=2'
+    '--codec-param' "qp=${crf}"
+  )
+
+  if [ "${scale}" != '0x0' ]; then
+    case "${codec}" in
+      *_vaapi)
+        wfr_args+=('--filter' "scale_vaapi=w=${scale%x*}:h=${scale#*x}:format=nv12:out_range=full")
+        ;;
+      *)
+        wfr_args+=('--filter' "scale=${scale%x*}:${scale#*x}")
+        ;;
+    esac
+  fi
+
+  wfr_args+=('--file' "${outfile}")
+
+  wf-recorder "${wfr_args[@]}" &
+  wfr_pid=$!
+  [ -n "${wfr_pid:-}" ] || return 1
+  printf '%s' "${wfr_pid}" >"${XEO_SCRREC_WLR_PIDFILE}" || return $?
+}
+
+confirm() {
+  local _input=$'Yes\nNo'
+  local _confirm
+  _confirm="$(rofi -dmenu \
+                   -p "[${XEO_SCRREC_WLR_PROG}] start recording?" \
+                   -theme-str 'listview{lines:2;}' <<<"${_input}")"
+  [ "${_confirm:-}" = 'Yes' ] || return 1
+}
+
+make_outfile() {
+  local _xdg_vid_dir _outdir
+  _xdg_vid_dir="$(xdg-user-dir VIDEOS)"
+  if [ "${_xdg_vid_dir:-${HOME}}" = "${HOME}" ]; then
+    _outdir="${HOME}/Videos/Screencasts"
+  else
+    _outdir="${_xdg_vid_dir}/Screencasts"
+  fi
+  [ -d "${_outdir}" ] || mkdir -p "${_outdir}" || return $?
+  outfile="${_outdir}/screencast-$(date +%Y%m%d-%H%M%S).${fmt}"
+}
+
+on_exit() {
+  local _rc=$?
+  trap - EXIT INT TERM
+
+  if [ -n "${wfr_pid:-}" ]; then
+    kill "${wfr_pid}" 2>/dev/null
+    [ -z "${QUIET:-}" ] && notify "Stopped on ${geom}${aud_src:+\n + ${aud_src}}"
+  fi
+  if [ -f "${XEO_SCRREC_WLR_PIDFILE}" ]; then
+    rm -f "${XEO_SCRREC_WLR_PIDFILE}"
+  fi
+
+  exit "${_rc}"
+}
+
+usage() {
+  cat <<EOF
+Usage: ${XEO_SCRREC_WLR_PROG} [OPTION]... [<FILE>]
+Record screen and optional audio in wlroots Wayland environments.
+
+Arguments:
+  <FILE>
+      write recording to <FILE> or a timestamped file name in
+      "\$XDG_VIDEOS_DIR/Screencasts" if not specified. If <FILE> is -, write
+      recording to the standard output
+
+Options:
+      --codec=CODEC
+          set video encoding to CODEC (default: hevc_vaapi)
+      --crf=CRF
+          set constant rate factor for the video to CRF (default: 22) which must
+          be a number within the range of 0 to 51
+  -f, --format=FORMAT
+          set video container format to FORMAT which must be either mp4
+          (default) or mkv
+      --fps=FPS
+          set video frames per second to FPS which must be either 30 (default)
+          or 60
+  -q, --quiet
+          disable notification
+  -s, --scale=WxH
+          scale captured content to fit within WxH resolution while keeping its
+          aspect ratio; if not specified or specified as 0x0 (default), the
+          physical (original) resolution of the display output is used.
+  -t, --target=TARGET
+          set a TARGET to record; see supported target formats below
+      --with-audio[=AUDIO_SRC]
+          include audio; if AUDIO_SRC is not specified, prompt the user to
+          choose one
+      --help
+          print this help and exit
+  -V, --version
+          output version information and exit
+
+The TARGET argument can be any of the following:
+  io            select a display output (default if --target not present)
+  ig            select an arbitrary rectangular region
+  o=<OUTPUT>    specify the display output to OUTPUT
+  g=<GEOMETRY>  specify the geometry of a rectangular region in form of
+                'X,Y WxH', where X and Y are the horizontal and vertical pixel
+                coordinates of the top-left corner of the region respectively,
+                W and H are the width and height of the region respectively
+EOF
+}
+
+main() {
+  local _args
+  if ! _args=$(getopt --options f:qs:t:V \
+      --longoptions codec:,crf:,format:,fps:,scale:,help,quiet,target:,version,with-audio:: \
+      --name "${XEO_SCRREC_WLR_PROG}" -- "$@"); then
+    print_hint >&2
+    exit 1
+  fi
+  eval set -- "${_args}"
+  unset _args
+
+  while true; do
+    case "$1" in
+      --codec)
+        codec="$2"
+        shift
+        ;;
+      --crf)
+        validate_video_crf "$2" || die_with_hint "invalid $1 argument '$2'"
+        crf="$2"
+        shift
+        ;;
+      -f|--format)
+        case "$2" in
+          mp4|mkv)
+            fmt="$2"
+            ;;
+          *)
+            die_with_hint "unsupported format '$2'"
+            ;;
+        esac
+        shift
+        ;;
+      --fps)
+        case "$2" in
+          30|60)
+            fps="$2"
+            ;;
+          *)
+            die_with_hint "unsupported FPS '$2'"
+            ;;
+        esac
+        shift
+        ;;
+      -q|--quiet)
+        readonly QUIET=1
+        ;;
+      -s|--scale)
+        validate_video_resolution "$2" || die_with_hint "invalid $1 argument '$2'"
+        scale="$2"
+        shift
+        ;;
+      -t|--target)
+        case "$2" in
+          ig|io)
+            tgt="$2"
+            ;;
+          g=*) # direct geometry
+            set_geometry "${2#g=}" \
+              || die_with_hint "invalid geometry form '${2#g=}'"
+            tgt='g='
+            ;;
+          o=*) # direct display output
+            set_disp_output "${2#o=}" \
+              || die_with_hint "invalid display output '${2#g=}'"
+            tgt='o='
+            ;;
+          *)
+            die_with_hint "invalid $1 argument '$2'"
+            ;;
+        esac
+        shift
+        ;;
+      --with-audio)
+        readonly WITH_AUD=1
+        if [ -n "${2:-}" ]; then
+          validate_audio_source "$2" || die "invalid audio source '$2'"
+          aud_src="$2"
+          shift
+        fi
+        ;;
+      --help)
+        usage
+        exit 0
+        ;;
+      -V|--version)
+        print_version
+        exit 0
+        ;;
+      --)
+        shift
+        break
+        ;;
+    esac
+    shift
+  done
+
+  precheck
+  ensure_singleton
+
+  if [ -n "${WITH_AUD:-}" ] && [ -z "${aud_src:-}" ]; then
+    select_audio_source || exit $?
+  fi
+
+  if [ -z "${geom:-}" ]; then
+    case "${tgt:-io}" in
+      ig)
+        select_rect_region || exit $?
+        ;;
+      io)
+        select_disp_output || exit $?
+        ;;
+    esac
+  fi
+
+  confirm || exit $?
+
+  case "${1:-}" in
+    '')
+      make_outfile || exit $?
+      ;;
+    -)
+      outfile='/dev/stdout'
+      ;;
+    *)
+      outfile="$1"
+      ;;
+  esac
+
+  [ -z "${QUIET:-}" ] && notify "Started on ${geom}${aud_src:+\n + ${aud_src}}"
+
+  trap 'on_exit' EXIT
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
+
+  run_recorder || exit $?
+  wait "${wfr_pid}" 2>/dev/null
+}
+
+codec='hevc_vaapi'
+crf=22
+fmt='mp4'
+fps=30
+scale='0x0'
+wfr_args=()
+
+main "$@"

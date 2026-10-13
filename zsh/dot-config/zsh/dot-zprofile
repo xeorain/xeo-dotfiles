@@ -1,0 +1,16 @@
+# SPDX-License-Identifier: MIT
+#
+# Copyright (c) 2026 Jerry Xeo
+#
+# User login profile for Zsh
+#
+# NOTE: Parameters such as HISTFILE must be set in .zshrc because the
+# system-level rc file (e.g., /etc/zshrc, which is sourced after user .zprofile)
+# may reset them. A typical case is that macOS resest HISTFILE in its /etc/zshrc
+# file.
+
+# Load a shared base environment.
+[ -s "${XDG_CONFIG_HOME:-$HOME/.config}/shell/profile.sh" ] \
+  && . "${XDG_CONFIG_HOME:-$HOME/.config}/shell/profile.sh"
+
+# vim:ft=zsh:foldmethod=marker:foldlevel=0

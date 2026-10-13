@@ -1,0 +1,23 @@
+# SPDX-License-Identifier: MIT
+#
+# Copyright (c) 2020 Roman Perepelitsa
+# Copyright (c) 2026 Jerry Xeo
+#
+# Compile z4x core files and generate the custom `compinit` implementation.
+
+# Compile all z4x source files.
+z4x compile -- "$ZDOTDIR"/{z4x.zsh,z4x-functions/(|-|_)z4x[^.]#~*.zwc} || return
+
+# Override original compinit
+[[ -v functions[compinit] ]] && unfunction compinit
+autoload -Uz +X compinit || return
+local orig="bindkey '^i' | IFS=\$' \t' read -A _i_line"
+local repl="_i_line=( '\"^I\"' z4x-fzf-complete)"
+print -r -- ${functions[compinit]/$orig/$repl} >"$ZDOTDIR"/z4x-functions/tmp.$$.compinit || return
+zf_mv -- "$ZDOTDIR"/z4x-functions/tmp.$$.compinit "$ZDOTDIR/z4x-functions/-z4x-compinit-impl" || return
+z4x compile -- "$ZDOTDIR/z4x-functions/-z4x-compinit-impl" || return
+autoload -Uz -- -z4x-compinit-impl
+
+function compinit() {}
+
+# vim:ft=zsh

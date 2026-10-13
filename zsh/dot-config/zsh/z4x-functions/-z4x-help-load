@@ -1,0 +1,28 @@
+# SPDX-License-Identifier: MIT
+#
+# Copyright (c) 2020 Roman Perepelitsa
+# Copyright (c) 2026 Jerry Xeo
+#
+# Print command help for `z4x load` (`-z4x-cmd-load`).
+
+eval "$_z4x_opt"
+
+print -Pr -- "$(<<\END
+%F{4}Usage:%f %F{2}z4x%f %Bload%b [-c|--compile] [--] [<dir>]...
+
+Load plugins in Oh My Zsh or Prezto format, skipping over inexisting
+directories. If %B-c%b or %B--compile%b is specified, plugin source files are
+automatically compiled with %F{2}zcompile%f to speed up subsequent loading,
+which boosts Zsh startup.
+
+Relative directory names are resolved from %U$ZDOTDIR/%u, e.g., the command
+below loads %U$ZDOTIDIR/plugins/bd%u:
+
+  %F{2}z4x%f %Bload%b plugins/bd
+
+Exit code of %F{2}z4x%f %Bload%b is that of sourcing the last plugin's
+source file. Inexisting plugin directories do not affect exit code.
+END
+)"
+
+# vim:ft=zsh

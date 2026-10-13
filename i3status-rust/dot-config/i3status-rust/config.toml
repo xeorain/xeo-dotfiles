@@ -1,0 +1,429 @@
+# User configuration for i3status-rust
+#
+# See https://docs.rs/i3status-rs/latest/i3status_rs/blocks/index.html for
+# reference.
+#
+# Copyright (c) 2026 Jerry Xeo
+
+# For Nerd Fonts, the spaces around an icon are rendered as ghost dots. The
+# font fallback Pango markup must be used to enclose the icon so that
+# swaybar, which uses the Pango library for text rendering, can handle the icon
+# glyphs separately from the surroundings.
+#
+# It probably boils down to how Pango renders characters in Private Use Area
+# (PUA). Pango attaches a space before an icon to the icon context, and looks
+# up the glyph for the space in the given icon font. If the glyph is missing in
+# the font, Pango draws a missing-glyph marker (hex box or tiny dot) instead of
+# looking for the glyph in the fonts given by the fallback list, resulting in a
+# pre-icon dot. The post-icon dot seems to be a virtual boundary added by Pango
+# to prevent the icon overlapping the following characters. If the virtual
+# boundary glyph is missing in the icon font, Pango draws a missing-glyph
+# marker as well.
+#
+# See https://github.com/greshake/i3status-rust/issues/2260
+#
+# NOTE: The 'icons_format' key only works with built-in supported icons. For
+# icons embedded in a format text, the same Pango markup must surround each of
+# them.
+icons_format = "<span fallback='true'>{icon}</span>"
+
+[theme]
+theme = "xeorain"
+[theme.overrides]
+start_separator = ""
+
+# All integrated icons can be found at
+# https://github.com/greshake/i3status-rust/tree/master/files/icons
+[icons]
+icons = "awesome7pro"
+
+### Focused window title ###
+[[block]]
+block = "focused_window"
+format = "  $title.str(max_w:80)  |"
+[block.theme_overrides]
+idle_bg = "#944a76" # magenta
+#idle_bg = "#427b58" # green (alternative)
+idle_fg = "#fafafa"
+
+### Music status ###
+#
+# Requires:   mpd, mpdris2-rs (or mpdris2)
+[[block]]
+block = "music"
+format = " $icon $combo.str(max_w:40,rot_interval:0.5) |"
+player = "mpd"
+signal = 4
+[block.theme_overrides]
+info_bg = "#005577" # dark cyan
+info_fg = "#eeeeee"
+
+### Scratchpad status ###
+# Show the number of scratchpad windows
+[[block]]
+block = "scratchpad"
+format = ' $icon$count.eng(range:1..) |'
+
+### A custom screen recording indicator ###
+[[block]]
+block = "custom"
+format = " $text.pango-str() |"
+interval = "once"
+command = '''
+if /bin/kill -0 -- "$(cat "${XDG_RUNTIME_DIR:-/tmp}/xeo-screenrec-wlr-${EUID:-$(id -u)}-${XDG_SESSION_ID:-$(cat /proc/self/sessionid)}.pid")" >/dev/null 2>&1; then
+  printf '<span fallback="true">󰄙</span>'
+else
+  printf ''
+fi
+'''
+hide_when_empty = true
+shell = "bash"
+signal = 5
+[block.theme_overrides]
+idle_bg = "#7e56c2" # purple
+idle_fg = "#eeeeee"
+[[block.click]]
+button = "middle"
+cmd = ''' pkill -u "${EUID:-$(id -u)}" -x xeo-screenrec-wlr '''
+
+### A custom audio recording indicator ###
+#
+# Requires:   pipewire-utils
+[[block]]
+block = "custom"
+format = " $text.pango-str() |"
+interval = "once"
+command = '''
+if /bin/kill -0 -- "$(cat "${XDG_RUNTIME_DIR:-/tmp}/xeo-audiorec-${EUID:-$(id -u)}-${XDG_SESSION_ID:-$(cat /proc/self/sessionid)}.pid")" >/dev/null 2>&1; then
+  printf '<span fallback="true"></span>'
+else
+  printf ''
+fi
+'''
+signal = 6
+hide_when_empty = true
+shell = "bash"
+[block.theme_overrides]
+idle_bg = "#7e56c2" # purple
+idle_fg = "#eeeeee"
+[[block.click]]
+button = "middle"
+cmd = ''' pkill -u "${EUID:-$(id -u)}" -x xeo-audiorec '''
+
+### A custom clipboard status block ###
+#
+# Show a clipboard icon followed by the number of clipboard history items.
+# The number is displayed in engineering notation where large numbers have a
+# suffix like K, M, G, etc.
+#
+# cliphist uses bbolt database to store clipboard history. The combination of
+# using a dedicated inspection command `bbolt`, `grep` and `cut` is
+# significantly faster than `cliphist list | wc -l`, especially for large
+# database. This is because `cliphist list` must open the database, iterate
+# through every entry, format each one into a string (ID + Preview text), and
+# then dump that massive text stream to the pipe for `wl -l` to count the number
+# of lines.
+#
+# Requires:   cliphist (indicator-format=percentage),
+#             bbolt (provided by the golang-etcd-bbolt package on Fedora)
+# Requires:   ~/.local/libexec/xeo-utils-desktop/cliphist-helper
+[[block]]
+block = "custom"
+format = " <span fallback='true'>󰨸</span> $text.pango-str() |"
+command = '''
+cnt="$(bbolt stats ~/.cache/cliphist/db | grep -m1 'keys/value pairs' | cut -d' ' -f5)"
+if [ "${cnt}" -ne 0 ]; then
+  cnt="$(numfmt --to=si --format='%.1f' ${cnt} | sed 's/\.0//')"
+else
+  cnt=''
+fi
+printf '{"state":"Idle","text":"%s"}' "${cnt}"
+'''
+if_command = 'test -x "$HOME/.local/libexec/xeo-utils-desktop/cliphist-helper"'
+interval = "once"
+signal = 3
+json = true
+hide_when_empty = true
+shell = "sh"
+[[block.click]]
+button = "left"
+cmd = '~/.local/libexec/xeo-utils-desktop/cliphist-helper copy'
+[[block.click]]
+button = "right"
+cmd = '~/.local/libexec/xeo-utils-desktop/cliphist-helper delete && ~/.local/libexec/xeo-utils-desktop/bar-signal i3status-rs 3'
+[[block.click]]
+button = "middle"
+cmd = '~/.local/libexec/xeo-utils-desktop/cliphist-helper wipe && ~/.local/libexec/xeo-utils-desktop/bar-signal i3status-rs 3'
+
+### Weather forecast ###
+#
+# When 'autolocate' is set to true, the weather block automatically queries
+# location through the ipapi (https://ipapi.co) service at an time interval
+# (in seconds) set by 'autolocate_interval'. The ipaip.co service has a daily
+# limit of 1000 free requests. Once the limited is reached, the weather block
+# will fall back to the static location set in 'block.service' table.
+#
+# NOTE: Although the 'autolocate_interval' is set to 1800 seconds—resulting in
+# only 48 requests in total per day, it would be better to use a static
+# location (which can be obtained with `curl ipinfo.io/loc`) for stationary
+# devices such as a home or office PC, and is especially recommended for those
+# living in countries where access to https://ipapi.co is restricted.
+[[block]]
+block = "weather"
+interval = 1800 # weather query time interval
+autolocate = false # prefer static location over auto location query
+autolocate_interval = 1800 # auto location query time interval
+format = " $icon $temp "
+format_alt = " $icon $weather ($location) $temp, $wind m/s $direction"
+[block.service]
+name = "metno" # weather service
+coordinates = [ "31.2222", "121.4581" ] # static location
+forecast_hours = 6
+
+### System uptime ###
+[[block]]
+block = "uptime"
+interval = 3600
+format = " $icon $uptime "
+[block.icons_overrides]
+uptime = ""
+
+### Device usages ###
+# Disk usage
+[[block]]
+block = "disk_space"
+backend = "btrfs"
+path = "/"
+info_type = "used"
+alert_unit = "GB"
+interval = 60
+warning = 100.0
+alert = 50.0
+format = " $icon {$percentage.eng(w:1) |}"
+merge_with_next = true
+[block.icons_overrides]
+disk_drive = ""
+
+# Memory usage
+[[block]]
+block = "memory"
+format = " $icon {$mem_used_percents.eng(w:1) |}"
+format_alt = " $icon_swap {$swap_used_percents.eng(w:1) |}"
+merge_with_next = true
+[block.icons_overrides]
+memory_mem = ""
+memory_swap = ""
+
+# CPU usage
+[[block]]
+block = "cpu"
+interval = 5
+info_cpu = 30
+warning_cpu = 70
+critical_cpu = 90
+format = " $icon $utilization "
+[block.icons_overrides]
+cpu = ""
+
+### Device temperatures ###
+# CPU temperature from the coretemp sensor module
+[[block]]
+block = "temperature"
+interval = 5
+format = " $icon $max "
+chip = "coretemp-isa-0000"
+merge_with_next = true
+[block.theme_overrides]
+good_fg = "#abb9b6"
+
+# CPU socket temperature from the acpitz module
+#
+# Use the acpitz temperature to approximate CPU socket temperature as the Linux
+# kernel has no direct support.
+#
+# NOTE: Uncomment this block if you don't use the nct6687 driver for fetching
+#device temperatures.
+#[[block]]
+#block = "temperature"
+#interval = 5
+#format = " $icon $max "
+#chip = "acpitz_0-acpi-0"
+#merge_with_next = true
+#[block.theme_overrides]
+#good_fg = "#abb9b6"
+
+# WARN: Do not use the following blocks if your computer motherboard does not
+# have an nct6687-isa-* chip or you haven't got the device driver installed!
+#
+# The third-party nct6687 driver (https://github.com/Fred78290/nct6687d) is used
+# access the Nuvoton NCT66xx Super I/O chip on motherboards (e.g., MSI B660M) to
+# get finer-grained device temperatures
+#
+# CPU socket temperature from the nct6687 driver
+[[block]]
+block = "temperature"
+interval = 5
+format = " $icon $max "
+format_alt = " CPU Socket $max "
+chip = "nct6687-isa-*"
+inputs = [ "CPU Socket" ]
+merge_with_next = true
+[block.theme_overrides]
+good_fg = "#abb9b6"
+
+# Accurate PCH temperature from the nct6687 driver
+[[block]]
+block = "temperature"
+interval = 5
+format = " $icon $max "
+format_alt = " PCH $max "
+chip = "nct6687-isa-*"
+inputs = [ "PCH" ]
+merge_with_next = true
+[block.theme_overrides]
+good_fg = "#abb9b6"
+
+# NVME SSD temperature
+[[block]]
+block = "temperature"
+interval = 5
+format = " $icon $max "
+chip = "nvme-pci-0100"
+inputs = ["Composite", "Sensor 1", "Sensor 2"]
+[block.theme_overrides]
+good_fg = "#abb9b6"
+
+### Network connection indicators ###
+# Ethernet network
+[[block]]
+block = "net"
+interval = 10
+device = "^enp3s0$"
+format = " $icon "
+format_alt = " $icon $device: $ip "
+inactive_format = "󰲛" # nf-md-network_off
+merge_with_next = true
+[block.icons_overrides]
+net_wired = "󰛳" # nf-md-network
+
+# Wireless network
+[[block]]
+block = "net"
+interval = 10
+device = "^wlo1$"
+format = " $icon $signal_strength "
+format_alt = " $icon $device ($ssid): $ip "
+inactive_format = " <span fallback='true'>󰖪</span> "
+merge_with_next = true
+[block.icons_overrides]
+net_wireless = "󰖩"
+
+# Bluetooth
+[[block]]
+block = "bluetooth"
+mac = "CC:15:31:5A:3D:35" # change it to match your device
+disconnected_format = " <span fallback='true'>󰂲</span> "
+#disconnected_format = ""
+
+### Display brightness (applicable to laptop internal displays only) ###
+[[block]]
+block = "backlight"
+format = " $icon $brightness"
+if_command = 'test -n "$(ls -A /sys/class/backlight)"'
+[block.icons_overrides]
+backlight = [ "󱩎", "󱩏", "󱩐", "󱩐", "󱩑", "󱩒", "󱩓", "󱩔", "󱩕", "󱩖", "󰛨" ]
+
+### Sound volumes ###
+# Speaker
+[[block]]
+block = "sound"
+device_kind = "sink"
+driver = "pipewire"
+format = " $icon {$volume.eng(w:2) |}"
+format_alt = " $icon $output_name {$volume.eng(w:2) |}"
+merge_with_next = true
+[[block.click]]
+button = "left"
+cmd = "wiremix"
+[block.icons_overrides]
+volume = [ "", "", "", "" ]
+volume_muted = ""
+
+# Microphone
+[[block]]
+block = "sound"
+device_kind = "source"
+driver = "pipewire"
+format = " $icon {$volume.eng(w:2) |}"
+format_alt = " $icon $output_name {$volume.eng(w:2) |}"
+[[block.click]]
+button = "left"
+cmd = "wiremix"
+[block.icons_overrides]
+microphone = ""
+microphone_muted = ""
+
+### Battery status (applicable to laptops only) ###
+[[block]]
+block = "battery"
+interval = 10
+if_command = 'test -n "$(ls -A /sys/class/power_supply)"'
+[block.icons_overrides]
+bat = [ "󰂎", "󰁺", "󰁼", "󰁽", "󰁾", "󰁿", "󰂀", "󰂁", "󰂂", "󰁹" ]
+bat_charging = ""
+bat_not_available = ""
+
+### Date and time ###
+[[block]]
+block = "time"
+interval = 5
+format = " <span fallback='true'></span>  $timestamp.datetime(f:'%a %b %e  %_I:%M %p') "
+
+### A custom idle inhibition state indicator ###
+# Requires:   xeo-inhibit-idle, ~/.local/libexec/xeo-utils-desktop/bar-signal
+[[block]]
+block = "custom"
+format = " $text.pango-str() "
+hide_when_empty = true
+interval = 60
+if_command = "command -v xeo-inhibit-idle"
+command = ''' mins=$(xeo-inhibit-idle) && printf '<span fallback="true">󰒳</span> %s' "${mins}" || printf '<span fallback="true">󰒲</span>' '''
+shell = "sh"
+signal = 2
+[[block.click]]
+button = "left"
+cmd = 'xeo-inhibit-idle interactive && ~/.local/libexec/xeo-utils-desktop/bar-signal i3status-rs 2'
+[[block.click]]
+button = "middle"
+cmd = 'xeo-inhibit-idle off && ~/.local/libexec/xeo-utils-desktop/bar-signal i3status-rs 2'
+
+### System menu ###
+#
+# Mouse Operations:
+#   - Left-click activate the menu, wheel up/down to cycle menu items
+#   - Left-click on the menu item to run it, optionally left-click again to
+#     confirm
+#   - Right-click to deactivate the menu
+#
+# Requires:   sway, swaylock
+[[block]]
+block = "menu"
+text = " <span fallback='true'></span>"
+if_command = 'command -v swaymsg && command -v swaylock'
+[[block.items]]
+display = " -&gt;   Lock   &lt;-"
+cmd = "exec swaylock"
+[[block.items]]
+display = " -&gt;   Logout   &lt;-"
+cmd = "swaymsg exit"
+[[block.items]]
+display = " -&gt;   Sleep   &lt;-"
+cmd = "systemctl suspend"
+[[block.items]]
+display = " -&gt; Power Off &lt;-"
+cmd = "systemctl poweroff"
+confirm_msg = "Are you sure to power off?"
+[[block.items]]
+display = " -&gt;  Reboot   &lt;-"
+cmd = "systemctl reboot"
+confirm_msg = "Are you sure to reboot?"

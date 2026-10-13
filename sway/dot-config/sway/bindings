@@ -1,0 +1,188 @@
+# Core key bindings for Sway.
+#
+# Requires:   foot, rofi (>= 2.0) or rofi-wayland
+#
+# Copyright (c) 2026 Jerry Xeo
+
+#
+# Basics:
+#
+# Drag floating windows by holding down $mod and left mouse button.
+# Resize them with right mouse button + $mod.
+# Despite the name, also works for non-floating windows.
+# Change normal to inverse to use left mouse button for resizing and right
+# mouse button for dragging.
+floating_modifier $mod normal
+
+## Launch // Terminal ##
+$bindsym $mod+Return exec $term
+$bindsym $mod+Shift+Return exec '$term_float'
+
+## Launch // Application launcher ##
+$bindsym $mod+d exec $menu
+
+## Action // Kill focused window ##
+$bindsym $mod+Shift+q kill
+
+## Action // Reload Sway configuration ##
+$bindsym $mod+Shift+r reload
+
+## Action // Exit Sway
+# Use config.d/65-mode-system.conf instead.
+#$bindsym $mod+Shift+e exec swaynag -t warning -m 'Do you really want to exit Sway? This will end your Wayland session.' -B 'Yes, exit sway' 'swaymsg exit'
+
+#
+# Moving around:
+#
+## Nagivation // Move focus // $mod + hjkl ##
+$bindsym $mod+$left focus left
+$bindsym $mod+$down focus down
+$bindsym $mod+$up focus up
+$bindsym $mod+$right focus right
+# Ditto, with arrow keys
+$bindsym $mod+$left_alt focus left
+$bindsym $mod+$down_alt focus down
+$bindsym $mod+$up_alt focus up
+$bindsym $mod+$right_alt focus right
+
+## Navigation // Move focused window // $mod + Shift + hjkl ##
+$bindsym $mod+Shift+$left move left
+$bindsym $mod+Shift+$down move down
+$bindsym $mod+Shift+$up move up
+$bindsym $mod+Shift+$right move right
+# Ditto, with arrow keys
+$bindsym $mod+Shift+$left_alt move left
+$bindsym $mod+Shift+$down_alt move down
+$bindsym $mod+Shift+$up_alt move up
+$bindsym $mod+Shift+$right_alt move right
+
+## Navigation // Swap containers // $mod + Ctrl + hjkl ##
+$bindsym $mod+Ctrl+$left mark swap, focus left, swap container with mark swap
+$bindsym $mod+Ctrl+$down mark swap, focus down, swap container with mark swap
+$bindsym $mod+Ctrl+$up mark swap, focus up, swap container with mark swap
+$bindsym $mod+Ctrl+$right mark swap, focus right, swap container with mark swap
+# Ditto, with arrow keys
+$bindsym $mod+Ctrl+$left_alt mark swap, focus left, swap container with mark swap
+$bindsym $mod+Ctrl+$down_alt mark swap, focus down, swap container with mark swap
+$bindsym $mod+Ctrl+$up_alt mark swap, focus up, swap container with mark swap
+$bindsym $mod+Ctrl+$right_alt mark swap, focus right, swap container with mark swap
+
+## Navigation // Move focused workspace // $mod + Ctrl + Shift + hjkl ##
+$bindsym $mod+Ctrl+Shift+$left move workspace to output left
+$bindsym $mod+Ctrl+Shift+$up move workspace to output up
+$bindsym $mod+Ctrl+Shift+$down move workspace to output down
+$bindsym $mod+Ctrl+Shift+$right move workspace to output right
+# Ditto, with arrow keys
+$bindsym $mod+Ctrl+Shift+$left_alt move workspace to output left
+$bindsym $mod+Ctrl+Shift+$up_alt move workspace to output up
+$bindsym $mod+Ctrl+Shift+$down_alt move workspace to output down
+$bindsym $mod+Ctrl+Shift+$right_alt move workspace to output right
+
+#
+# Workspaces:
+#
+# NOTE: The form of '[N][:][NAME]' allows swaybar to display only the name for
+# the workspace by stripping the leading number and colon, in case the workspace
+# box in the bar is not wide enough to hold 2 digits.
+#
+## Navigation // Switch workspace // $mod + <NUMBER> ##
+$bindsym $mod+1 workspace number 1
+$bindsym $mod+2 workspace number 2
+$bindsym $mod+3 workspace number 3
+$bindsym $mod+4 workspace number 4
+$bindsym $mod+5 workspace number 5
+$bindsym $mod+6 workspace number 6
+$bindsym $mod+7 workspace number 7
+$bindsym $mod+8 workspace number 8
+$bindsym $mod+9 workspace number 9
+$bindsym $mod+0 workspace number 10:0
+## Navigation // Switch back and forth between workspaces // $mod + ,. ##
+$bindsym $mod+comma workspace prev_on_output
+$bindsym $mod+period workspace next_on_output
+## Navigation // Switch to the recently used workspace ##
+$bindsym $mod+Tab workspace back_and_forth
+#$bindsym $alt_mod+Tab workspace back_and_forth
+
+## Action // Move focused container to workspace // $mod + Shift + <NUMBER> ##
+$bindsym $mod+Shift+1 move container to workspace number 1
+$bindsym $mod+Shift+2 move container to workspace number 2
+$bindsym $mod+Shift+3 move container to workspace number 3
+$bindsym $mod+Shift+4 move container to workspace number 4
+$bindsym $mod+Shift+5 move container to workspace number 5
+$bindsym $mod+Shift+6 move container to workspace number 6
+$bindsym $mod+Shift+7 move container to workspace number 7
+$bindsym $mod+Shift+8 move container to workspace number 8
+$bindsym $mod+Shift+9 move container to workspace number 9
+$bindsym $mod+Shift+0 move container to workspace number 10:0
+## Action // Move focused container to previous or next workspace // $mod + Shift + ,. ##
+$bindsym $mod+Shift+comma move container to workspace prev_on_output
+$bindsym $mod+Shift+period move container to workspace next_on_output
+
+## Action // Move focused container to workspace, and switch to that workspace // $mod + Alt + <NUMBER> ##
+$bindsym $mod+Alt+1 move container to workspace number 1, workspace number 1
+$bindsym $mod+Alt+2 move container to workspace number 2, workspace number 2
+$bindsym $mod+Alt+3 move container to workspace number 3, workspace number 3
+$bindsym $mod+Alt+4 move container to workspace number 4, workspace number 4
+$bindsym $mod+Alt+5 move container to workspace number 5, workspace number 5
+$bindsym $mod+Alt+6 move container to workspace number 6, workspace number 6
+$bindsym $mod+Alt+7 move container to workspace number 7, workspace number 7
+$bindsym $mod+Alt+8 move container to workspace number 8, workspace number 8
+$bindsym $mod+Alt+9 move container to workspace number 9, workspace number 9
+$bindsym $mod+Alt+0 move container to workspace number 10:0, workspace number 10:0
+## Action // Move focused container to previous/ next workspace, and swtich to that workspace // $mod + Alt + ,. ##
+$bindsym $mod+Alt+comma move container to workspace prev_on_output, workspace prev_on_output
+$bindsym $mod+Alt+period move container to workspace next_on_output, workspace next_on_output
+
+#
+# Layout:
+#
+## Setting // Set horizontal splits ##
+$bindsym $mod+b splith
+## Setting // Set vertical splits ##
+$bindsym $mod+v splitv
+
+## Action // Switch to stacking layout ##
+$bindsym $mod+s layout stacking
+## Action // Switch to tabbed layout ##
+$bindsym $mod+w layout tabbed
+## Action // Switch to tiling (split) layout ##
+$bindsym $mod+e layout toggle split
+
+## Action // Toggle fullscreen on focused window ##
+$bindsym $mod+f fullscreen
+## Action // Toggle fullscreen globally ##
+$bindsym $mod+Shift+f fullscreen global
+
+## Action // Toggle sticky on focused window ##
+$bindsym $mod+Shift+s sticky toggle
+
+## Aciton // Toggle floating on focused window ##
+$bindsym $mod+Shift+space floating toggle
+
+## Navigation // Swap focus between tiling area and floating area ##
+$bindsym $mod+space focus mode_toggle
+
+## Navigation // Move focus to parent container ##
+$bindsym $mod+a focus parent
+
+## Navigation // Move focus to the last-focused child container ##
+$bindsym $mod+Shift+a focus child
+
+## Action // Center focused floating window ##
+$bindsym $mod+Ctrl+c move position center
+
+#
+# Scratchpad:
+#
+## Action // Cycle through scratchpad windows ##
+$bindsym $mod+o scratchpad show
+## Action // Move focused window to scratchpad ##
+$bindsym  $mod+Shift+o move scratchpad
+
+#
+# Mouse:
+#
+## Action // Move mouse cursor far away ##
+$bindsym $mod+Ctrl+slash seat - cursor set 9999 9999
+
+# vim:ft=swayconfig

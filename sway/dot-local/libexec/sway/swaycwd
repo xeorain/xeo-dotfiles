@@ -1,0 +1,64 @@
+#!/bin/bash
+# SPDX-License-Identifier: MIT
+#
+# Copyright (c) 2026 Jerry Xeo
+#
+# A helper that gets the current working directory of the shell in the latest
+# terminal window.
+#
+# For terminal emulators running in server-client mode (e.g., foot, kitty, etc),
+# the `pid` field found in the `swaymsg -t get_tree` output for the focused
+# container is the PID of the terminal server process rather then the terminal
+# client process. The interactive shell running in each terminal window is a
+# child process spawned by the terminal server process. In other words, it is
+# the server process that draws the terminal window, spawns the shell, and
+# handles the I/O between the shell via pty devices. The role of a client is
+# merely to accept user instructions and request the server to create a new
+# terminal window.
+#
+# The process tree for foot running in server-client mode with two terminal
+# windows:
+#
+#     sway-+-foot-+-sh (A)
+#          |      `-sh (B)
+#          |-footclient (A)
+#          `-footclient (B)
+#
+# The process tree for kitty running in single-instance mode with two terminal
+# windows:
+#
+#     sway-+-kitty-+-kitten (A)
+#                  |-kitten (B)
+#                  |-sh (A)
+#                  `-sh (B)
+#
+# Unfortunately, there is no easy way to tell which shell is associated with
+# which terminal window. It could be achieved using some tricks like maintaining
+# a map between the Sway container id for each terminal client surface and the
+# PID of the associated shell, but this brings performance overhead and extra
+# maintenance.
+#
+# As a trade-off, this script simply takes the PID of the latest shell spawned
+# by the terminal server instead of strictly finding the PID of the shell
+# associated with the focused terminal window. Therefore, this script won't work
+# if you expect to open a new terminal with the same working directory as in any
+# focused terminal window.
+#
+# Requires:   jq, sway
+
+# Get the PID of currently focused container.
+# NOTE: For terminal running in server-client mode, you always get the PID of
+# the server process rather then the PID of the client process, because it is
+# actually server process that manages the terminal windows via Sway protocols.
+ppid="$(swaymsg -t get_tree | jq -r '.. | select(.type? == "con" and .focused? == true).pid')"
+[ -z "${ppid}" ] && printf '%s' "${HOME}"
+
+# Get the PID of the latest spawned shell by terminal
+pid="$(pgrep -u "${EUID}" --newest --parent "${ppid}")";
+[ -z "${pid}" ] && printf '%s' "${HOME}"
+
+if path="$(readlink -e "/proc/${pid}/cwd")" && [ -n "${path}" ]; then
+  printf '%s' "${path}"
+else
+  printf '%s' "${HOME}"
+fi

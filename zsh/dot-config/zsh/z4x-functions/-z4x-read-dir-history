@@ -1,0 +1,15 @@
+# SPDX-License-Identifier: MIT
+#
+# Copyright (c) 2020 Roman Perepelitsa
+#
+# Read recently accessed directories from a history file.
+
+local content
+local file="${XDG_STATE_HOME:-$HOME/.local/state}/zsh/dir-history-$EUID"
+if [[ -r "$file" ]] && content=$(<"$file"); then
+  typeset -ga _z4x_dir_history=(${(f)content})
+else
+  typeset -ga _z4x_dir_history=()
+fi
+
+# vim:ft=zsh

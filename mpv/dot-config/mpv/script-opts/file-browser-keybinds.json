@@ -1,0 +1,127 @@
+[
+    {
+        "comment": "deletes the currently selected file",
+        "key": "Alt+DEL",
+        "command": ["script-message", "run-statement", "os.remove(%F) ; fb.rescan()"],
+        "multiselect": true,
+        "multi-type": "repeat"
+    },
+    {
+        "comment": "opens the currently selected items in a new mpv window",
+        "key": "Ctrl+ENTER",
+        "command": ["run", "mpv", "%F"],
+        "multiselect": true,
+        "multi-type": "concat"
+    },
+    {
+        "key": "Ctrl+c",
+        "command": [
+            ["run", "powershell", "-command", "Set-Clipboard", "%F"],
+            ["print-text", "copied filepath to clipboard"]
+        ],
+        "condition": "fb.get_platform() == 'windows'",
+        "api_version": "1.9.0",
+        "multiselect": true,
+        "delay": 0.3
+    },
+
+    {
+        "key": "WHEEL_UP",
+        "command": ["script-binding", "file_browser/dynamic/scroll_up"],
+        "flags": { "repeat": true }
+    },
+    {
+        "key": "WHEEL_DOWN",
+        "command": ["script-binding", "file_browser/dynamic/scroll_down"],
+        "flags": { "repeat": true }
+    },
+    {
+        "key": "MBTN_LEFT",
+        "command": ["script-binding", "file_browser/dynamic/down_dir"]
+    },
+    {
+        "key": "MBTN_RIGHT",
+        "command": ["script-binding", "file_browser/dynamic/up_dir"]
+    },
+    {
+        "key": "MBTN_MID",
+        "command": ["script-binding", "file_browser/dynamic/play"]
+    },
+
+    {
+        "key": "k",
+        "command": ["script-binding", "file_browser/dynamic/scroll_up"],
+        "flags": { "repeat": true }
+    },
+    {
+        "key": "j",
+        "command": ["script-binding", "file_browser/dynamic/scroll_down"],
+        "flags": { "repeat": true }
+    },
+    {
+        "key": "l",
+        "command": ["script-binding", "file_browser/dynamic/down_dir"]
+    },
+    {
+        "key": "h",
+        "command": ["script-binding", "file_browser/dynamic/up_dir"]
+    },
+    {
+        "key": "H",
+        "command": ["script-binding", "file_browser/dynamic/goto_root"]
+    },
+    {
+        "key": "0",
+        "command": ["script-binding", "file_browser/dynamic/list_top"]
+    },
+    {
+        "key": "Shift+PGUP",
+        "command": []
+    },
+    {
+        "key": "G",
+        "command": ["script-binding", "file_browser/dynamic/list_bottom"]
+    },
+    {
+        "key": "Shift+PGDWN",
+        "command": []
+    },
+    {
+        "key": "Ctrl+f",
+        "command": ["script-binding", "file_browser/dynamic/page_down"]
+    },
+    {
+        "key": "PGDWN",
+        "command": []
+    },
+    {
+        "key": "Ctrl+b",
+        "command": ["script-binding", "file_browser/dynamic/page_up"]
+    },
+    {
+        "key": "PGUP",
+        "command": []
+    },
+
+    {
+        "key": "/",
+        "command": ["script-binding", "file_browser/dynamic/find/find"]
+    },
+    {
+        "key": "?",
+        "command": ["script-binding", "file_browser/dynamic/find/find_advanced"]
+    },
+    {
+        "key": "Ctrl+F",
+        "command": []
+    },
+
+    {
+        "key": "SPACE",
+        "command": ["script-binding", "file_browser/dynamic/select_item"]
+    },
+    {
+        "key": "S",
+        "command": []
+    }
+]

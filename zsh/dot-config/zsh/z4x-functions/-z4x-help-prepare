@@ -1,0 +1,32 @@
+# SPDX-License-Identifier: MIT
+#
+# Copyright (c) 2026 Jerry Xeo
+#
+# Print command help for `z4x prepare` (`-z4x-cmd-prepare`).
+
+eval "$_z4x_opt"
+
+print -Pr -- "$(<<\END
+%F{4}Usage:%f %F{2}z4x%f %Bprepare%b [-a|--all] [<plugin>]...
+
+Prepare the specified core plugins by invoking their corresponding preparation
+function %F{2}-z4x-prepare-<plugin>%f.
+
+The special plugin name "self" prepares z4x itself by invoking
+%F{2}-z4x-prepare-self%f which compiles all z4x source files and generates the
+z4x-specific %F{2}compinit%f implementation.
+
+If %B-a%b or %B--all%b is specified, all core plugins including "self" will be
+prepared.
+
+Examples:
+
+  %F{2}z4x%f %Bprepare%b self
+
+  %F{2}z4x%f %Bprepare%b powerlevel10k zsh-history-substring-search
+
+  %F{2}z4x%f %Bprepare%b -a
+END
+)"
+
+# vim:ft=zsh

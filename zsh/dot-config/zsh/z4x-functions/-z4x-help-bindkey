@@ -1,0 +1,20 @@
+# SPDX-License-Identifier: MIT
+#
+# Copyright (c) 2020 Roman Perepelitsa
+# Copyright (c) 2026 Jerry Xeo
+#
+# Print command help for `z4x bindkey` (`-z4x-cmd-bindkey`).
+
+eval "$_z4x_opt"
+
+print -Pr -- "$(<<\END
+%F{4}Usage:%f %F{2}z4x%f %Bbindkey%b [-M <keymap-mode>|-s] [--] <zle-widget|function> <key-binding>
+
+The <key-binding> argument can accept a key binding containing multiple key
+sequences surrounded by quotes, with sequences separated by spaces. For example:
+
+  %F{2}z4x%f %Bbindkey%b my-zle-widget 'Ctrl+X Ctrl+A'
+END
+)"
+
+# vim:ft=zsh

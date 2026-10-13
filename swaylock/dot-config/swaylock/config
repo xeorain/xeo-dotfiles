@@ -1,0 +1,12 @@
+# User configuration for swaylock.
+#
+# Copyright (c) 2026 Jerry Xeo
+
+# NOTE: ~/.local/share/wallpaper-lock is a symlink to an actual wallpaper image
+# file used on lock screen. To use a different background, make the symlink
+# point to a new target file rather than chaging the value to the `image`
+# option.
+image=~/.local/share/wallpaper-lock
+scaling=fill
+
+# vim:ft=conf

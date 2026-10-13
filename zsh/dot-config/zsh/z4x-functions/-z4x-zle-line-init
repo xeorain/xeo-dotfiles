@@ -1,0 +1,41 @@
+# SPDX-License-Identifier: MIT
+#
+# Copyright (c) 2020 Roman Perepelitsa
+#
+# A ZLE widget that is intended to be hooked into zle-line-init to override the
+# original zle-line-init widget.
+
+local -i ret
+
+if (( ${+widgets[-z4x-orig-zle-line-init]} )); then
+  zle -- -z4x-orig-zle-line-init "$@" || ret=$?
+fi
+
+# Set the cursor shape to beam for new prompt in viins mode
+[[ -o vi && -v _z4x_tty_fd ]] \
+  && print -nu "$_z4x_tty_fd" $_z4x_viins_cursor_shape
+
+if (( ${+_z4x_redraw_fd} )); then
+  # Remove the asynchronous file descriptor handler inside the Zsh Line Editor (ZLE)
+  zle -F $_z4x_redraw_fd
+  exec {_z4x_redraw_fd}>&-
+  unset _z4x_redraw_fd
+fi
+
+unset POSTDISPLAY _zsh_highlight__highlighter_${^ZSH_HIGHLIGHT_HIGHLIGHTERS}_cache
+typeset -g _ZSH_HIGHLIGHT_PRIOR_BUFFER=
+typeset -gi _ZSH_HIGHLIGHT_PRIOR_CURSOR=CURSOR
+region_highlight=()
+
+if [[ ${(%):-%~} != ${_z4x_last_dir-} && ! -v _z4x_dir_hist_fd ]]; then
+  typeset -gi _z4x_dir_hist_fd
+  if sysopen -o cloexec -ru _z4x_dir_hist_fd /dev/null; then
+    zle -F $_z4x_dir_hist_fd -z4x-update-dir-history
+  else
+    unset _z4x_dir_hist_fd
+  fi
+fi
+
+return ret
+
+# vim:ft=zsh

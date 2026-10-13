@@ -1,0 +1,12 @@
+# User configuration for bat
+#
+# Copyright (c) 2026 Jerry Xeo
+
+# NOTE:
+# * Once new syntax definitions or themes are introduced, you will need to run
+#   `bat cache --build` once to initialize or update the cache.
+# * To discard cached syntax definitions and themes, run `bat cache --clear`.
+--theme-dark="ashen"
+--theme-light="modus_operandi"
+
+# vim:ft=conf

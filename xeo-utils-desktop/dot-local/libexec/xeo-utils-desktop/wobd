@@ -1,0 +1,121 @@
+#!/bin/bash
+# SPDX-License-Identifier: MIT
+#
+# Copyright (c) 2026 Jerry Xeo
+#
+# Run wob as a background service.
+#
+# Usage: wobd [OPTION]...
+#
+# Options:
+#   -c, --config  Specify a web configuration file
+#   -l, --lock    Use a lock file to ensure singleton. Do not use it when
+#                 running this script as a systemd service
+#       --help    Print command help
+#
+# Requires:   wob
+
+XEO_WOBD_PROG="$(basename "$0")"
+readonly XEO_WOBD_PROG
+
+die_with_hint() {
+  printf '%s: %s\n' "${XEO_WOBD_PROG}" "$1" >&2
+  printf "Try '%s --help' for information\n" "${XEO_WOBD_PROG}" >&2
+  exit 1
+}
+
+usage() {
+  cat <<EOF
+Usage: ${XEO_WOBD_PROG} [OPTION]...
+
+Only a single instance is allowed to run for a login session.
+
+Options:
+  -c, --config=FILE
+          specify a configuration file
+  -l, --lock
+          use a lockfile to ensure singleton; do not use it when running wobd as
+          a systemd service
+      --help
+          print this help and exit
+EOF
+}
+
+on_exit() {
+  local _rc=$?
+  trap - EXIT INT TERM
+
+  # Kill the background process group.
+  [ -n "${pipeline_pid}" ] && kill -TERM -"${pipeline_pid}" 2>/dev/null
+
+  if [ -p "${XEO_WOBD_FIFO}" ]; then
+    rm -f "${XEO_WOBD_FIFO}" || _rc=$?
+  fi
+  if [ -n "${XEO_WOBD_LOCKFILE}" ] && [ -f "{XEO_WOBD_LOCKFILE}" ]; then
+    exec 9>&- && rm -f "${XEO_WOBD_LOCKFILE}" || _rc=$?
+  fi
+
+  case "${_rc}" in
+    130)
+      kill -s SIGINT $$ 2>/dev/null
+      ;;
+    143)
+      kill -s SIGTERM $$ 2>/dev/null
+      ;;
+    *)
+      exit "${_rc}"
+  esac
+}
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -c)
+      if [ $# -lt 2 ]; then
+        die_with_hint "option requires an argument -- '${1#-}'"
+      fi
+      XEO_CONFIG_FILE="$2"
+      ;;
+    --config)
+      if [ $# -lt 2 ]; then
+        die_with_hint "option '$1' requires an argument"
+      fi
+      XEO_CONFIG_FILE="$2"
+      shift
+      ;;
+    -l|--lock)
+      XEO_WOBD_USE_LOCKFILE=1
+      ;;
+    --help)
+      usage
+      exit 0
+      ;;
+    -*)
+      usage >&2
+      exit 1
+      ;;
+  esac
+  shift
+done
+readonly XEO_CONFIG_FILE
+
+trap 'on_exit' EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+if [ -n "${XEO_WOBD_USE_LOCKFILE}" ]; then
+  readonly XEO_WOBD_LOCKFILE="${XDG_RUNTIME_DIR:-/tmp}/wob-${EUID}-${XDG_SESSION_ID:-$(cat /proc/self/sessionid)}.lock"
+  exec 9>"${XEO_WOBD_LOCKFILE}"
+  if ! flock -n 9; then
+    printf "%s: only a single instance is allowed" "${XEO_WOBD_PROG}" >&2
+    exit
+  fi
+fi
+
+XEO_WOBD_FIFO="${XDG_RUNTIME_DIR:-/tmp}/wob-${EUID}-${XDG_SESSION_ID:-$(cat /proc/self/sessionid)}.fifo"
+
+! [ -e "${XEO_WOBD_FIFO}" ] || rm -f "${XEO_WOBD_FIFO}" || exit $?
+mkfifo "${XEO_WOBD_FIFO}" || exit $?
+
+tail -f "${XEO_WOBD_FIFO}" | wob ${XEO_CONFIG_FILE:+-c "${XEO_CONFIG_FILE}"} &
+pipeline_pid=$!
+wait "${pipeline_pid}"

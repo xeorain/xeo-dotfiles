@@ -1,0 +1,37 @@
+# SPDX-License-Identifier: MIT
+#
+# Copyright (c) 2020 Roman Perepelitsa
+#
+# A ZLE widget that is intended to be hooked into zle-line-pre-redraw to
+# override the original zle-line-pre-redraw widget.
+
+local -i ret
+
+if (( ${+widgets[-z4x-orig-zle-line-pre-redraw]} )); then
+  zle -- -z4x-orig-zle-line-pre-redraw "$@" || ret=$?
+fi
+
+if (( ${+_z4x_substring_search_highlight} )) &&
+    [[ "${_history_substring_search_cursor-}" != "$CURSOR" ||
+       "${_history_substring_search_result-}" != "$BUFFER" ]]; then
+  typeset -g _history_substring_search_result=
+  typeset -g _history_substring_search_query_highlight=
+  unset _z4x_substring_search_highlight _history_substring_search_cursor
+fi
+
+if (( PENDING || KEYS_QUEUED_COUNT )); then
+  if (( ! ${+_z4x_redraw_fd} )); then
+    typeset -gi _z4x_redraw_fd
+    if sysopen -o cloexec -ru _z4x_redraw_fd /dev/null; then
+      zle -F $_z4x_redraw_fd -z4x-redraw-buffer
+    else
+      unset _z4x_redraw_fd
+    fi
+  fi
+else
+  -z4x-redraw-buffer
+fi
+
+return ret
+
+# vim:ft=zsh

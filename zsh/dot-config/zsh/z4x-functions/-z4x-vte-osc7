@@ -1,0 +1,39 @@
+# SPDX-License-Identifier: MIT
+#
+# Copyright (c) 2020 Roman Perepelitsa
+# Copyright (c) 2026 Jerry Xeo
+#
+# z4x override for `__vte_osc7()`.
+#
+# The original `__vte_osc7` looks like this:
+#
+#   __vte_osc7 () {
+#     printf "\033]7;file://%s%s\033\\" "${HOSTNAME}" "$(/usr/libexec/vte-urlencode-cwd)"
+#   }
+#
+# It runs on precmd.
+
+emulate -L zsh -o no_multi_byte -o extended_glob
+
+if [[ "$PWD" == /* && "$PWD" -ef . ]]; then
+  local cwd="$PWD"
+else
+  local cwd="${${:-.}:a}"
+fi
+local host="$HOST"
+[[ -n "$cwd" && "$host" != *$'\e'* ]] || return
+
+if [[ "$cwd" != "$_z4x_vte_last_cwd" ]]; then
+  local MATCH MBEGIN MEND
+  # NOTE: The original complex zsh4human expansion for
+  # `_z4x_vte_last_encoded_cwd` breaks Vim syntax highlighting and causes a CPU
+  # spike. Store the culprit part that confuses Vim in a local variable as a
+  # workaround.
+  local culprit='[^a-zA-Z0-9"\/:_.-!'\''()~"]'
+  typeset -g _z4x_vte_last_encoded_cwd="${cwd//(#m)${culprit}/%${(l:2::0:)$(([##16]#MATCH))}}"
+  #typeset -g _z4x_vte_last_encoded_cwd="${cwd//(#m)[^a-zA-Z0-9"\/:_.-!'()~"]/%${(l:2::0:)$(([##16]#MATCH))}}"
+fi
+
+-z4x-tmux-bypass '\e]7;file://%s%s\e\' "$host" "$_z4x_vte_last_encoded_cwd"
+
+# vim:ft=zsh

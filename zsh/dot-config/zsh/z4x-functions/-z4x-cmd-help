@@ -1,0 +1,56 @@
+# SPDX-License-Identifier: MIT
+#
+# Copyright (c) 2020 Roman Perepelitsa
+# Copyright (c) 2026 Jerry Xeo
+#
+# The public z4x interface used to print z4x command help.
+
+eval "$_z4x_opt"
+
+if (( ARGC == 1 )); then
+  case $1 in
+    init)
+      print -Pr -- "%F{4}Usage:%f %F{2}z4x%f %Binit%b"
+      print -Pr -- ""
+      print -Pr -- "Initialize Zsh. Should be called only once from your %U.zshrc%u."
+    ;;
+    help)
+      print -Pr -- "%F{4Usage:%f %F{2}z4x%f %Bhelp%b [<command>]"
+      print -Pr -- ""
+      print -Pr -- "Print help for <command>."
+    ;;
+    *)
+      if (( $+functions[-z4x-help-$1] )); then
+        -z4x-help-$1
+      else
+        print -Pru2 -- "%F{3}z4x%f: unrecognized subcommand %F{1}'${1//\%/%%}'%f"
+        return 1
+      fi
+    ;;
+  esac
+  return
+fi
+
+if (( ARGC == 0 )); then
+  local fd=1 ret=0
+else
+  local fd=2 ret=1
+fi
+
+print -Pru $fd -- "$(<<EOF
+%F{4}Usage:%f %F{2}z4x%f <COMMAND>
+
+%F{4}Commands:%f
+   %Bbindkey%b [-M <keymap-mode>|-s] [--] <zle-widget|function> <key-binding>
+   %Bcompile%b [--] [<file>]...
+   %Binit%b
+   %Bload%b [-c|--compile] [--] [<dir>]...
+   %Bprepare%b [-a|--all] [<plugin>]...
+   %Bsource%b [-c|--compile] [--] [<file>]...
+   %Bhelp%b <command>
+EOF
+)"
+
+return ret
+
+# vim:ft=zsh

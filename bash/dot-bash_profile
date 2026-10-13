@@ -1,0 +1,17 @@
+# User login profile for Bash.
+#
+# Copyright (c) 2026 Jerry Xeo
+
+# Load shared base environment.
+[[ -s "${XDG_CONFIG_HOME:-${HOME}/.config}/shell/profile.sh" ]] \
+  && . "${XDG_CONFIG_HOME:-${HOME}/.config}/shell/profile.sh"
+
+# When started as a login shell, Bash does not automatically source ~/.bashrc,
+# even in interactive mode. A typical example is a text console login session
+# where Bash, running as the login shell, sources ~/.bash_profile or
+# ~/.bash_login, but skips ~/.bashrc. As a result, the shell environment lacks
+# user settings specific to interactive use, like key bindings and prompt
+# customization. Therefore, we explicitly source it here.
+[[ -s "${HOME}/.bashrc" ]] && . "${HOME}/.bashrc"
+
+# vim:ft=bash:foldmethod=marker:foldlevel=0

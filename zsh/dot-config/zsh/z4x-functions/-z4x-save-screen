@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: MIT
+#
+# Copyright (c) 2020 Roman Perepelitsa
+
+eval "$_z4x_opt"
+
+if [[ -n "$_Z4X_TMUX" ]]; then
+  local pane
+  pane="$(TMUX="$_Z4X_TMUX" TMUX_PANE="$_Z4X_TMUX_PANE" $_Z4X_TMUX_CMD capture-pane -p -e && print -n x)" \
+    || return
+  typeset -g _z4x_saved_screen=$'\e[0m\e[H'${${pane//$'\n'/$'\e[49m\e[K\r\n'}%$'\r\nx'}
+elif [[ -n "$Z4X_SSH" && -n "$_Z4X_SSH_MARKER" && -v _z4x_tty_fd ]]; then
+  printf '\001z4x.%s%s' "$_Z4X_SSH_MARKER" 'save-screen     ' >&$_z4x_tty_fd
+else
+  return 1
+fi
+
+# vim:ft=zsh

@@ -1,0 +1,18 @@
+# A custom color scheme for i3status-rs.
+#
+# Copyright (c) 2026 Jerry Xeo
+
+# The red, green, and yellow colors are picked from the Gruvbox Material theme.
+idle_bg = "#222b2e"
+idle_fg = "#abb9b6"
+info_bg = "#222b2e"
+info_fg = "#abb9b6"
+good_bg = "#222b2e"
+good_fg = "#89b482"
+warning_bg = "#222b2e"
+warning_fg = "#d8a657"
+critical_bg = "#222b2e"
+critical_fg = "#dc6868"
+separator = "|"
+separator_bg = "#222b2e"
+separator_fg = "#333f45"

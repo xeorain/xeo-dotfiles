@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: MIT
+#
+# Copyright (c) 2020 Roman Perepelitsa
+
+eval "$_z4x_opt"
+
+[[ -v _z4x_tty_fd ]] || return
+
+if [[ -n $_Z4X_TMUX ]]; then
+  (( ${+_z4x_saved_screen} )) || return
+  print -rnu $_z4x_tty_fd -- "$_z4x_saved_screen"
+elif [[ -n $Z4X_SSH && -n $_Z4X_SSH_MARKER ]]; then
+  printf '\001z4x.%s%s' "$_Z4X_SSH_MARKER" 'restore-screen  ' >&$_z4x_tty_fd
+else
+  return 1
+fi
+
+# vim:ft=zsh

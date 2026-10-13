@@ -1,0 +1,41 @@
+# SPDX-License-Identifier: MIT
+#
+# Copyright (c) 2026 Jerry Xeo
+#
+# A ZLE widget used to override the original `zle-keymap-select` for switching
+# cursor shape between 'vicmd' and 'viins' modes,
+#
+# The cursor uses the steady block shape in 'vicmd' mode and the steady bar
+# shape in 'viins' mode.
+#
+# VT520 escape code sequence for cursor shapes:
+#
+#   '\e[0 q'  default
+#   '\e[1 q'  blinking block (default)
+#   '\e[2 q'  steady block
+#   '\e[3 q'  blinking underline
+#   '\e[4 q'  steady underline
+#   '\e[5 q'  blinking (vertical) bar
+#   '\e[6 q'  steady (vertical) bar
+#
+# See https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-Functions-using-CSI-_-ordered-by-the-final-character_s_, search 'CSI Ps SP q'
+#
+# NOTE: Linux VGA/framebuffer console uses different escape code sequence for
+# software cursor shapes. See _z4x_zle_keymap_select_fb.
+#
+# Arguments:
+#   $1: last KEYMAP value
+
+[[ -v _z4x_tty_fd ]] || return
+
+case "$KEYMAP" in
+  'vicmd')
+    # Normal mode
+    print -nu $_z4x_tty_fd $_z4x_vicmd_cursor_shape
+    ;;
+  'main')
+    # 'main' is an alias of 'emacs' in Emacs mode or 'viins' in Vi mode.
+    [[ -o vi ]] && print -nu $_z4x_tty_fd $_z4x_viins_cursor_shape
+esac
+
+# vim:ft=zsh

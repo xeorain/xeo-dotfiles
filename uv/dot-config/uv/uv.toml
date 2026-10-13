@@ -1,0 +1,9 @@
+# User configuration for uv.
+#
+# Copyright (c) 2026 Jerry Xeo
+
+python-downloads = "manual"
+
+[[index]]
+url = "https://mirrors.aliyun.com/pypi/simple"
+default = true

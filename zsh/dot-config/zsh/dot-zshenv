@@ -1,0 +1,21 @@
+# SPDX-License-Identifier: MIT
+#
+# Copyright (c) 2026 Jerry Xeo
+#
+# This file is the first to be sourced in all Zsh sessions, regardless of being
+# active and non-interactive; hence, keep it minimal.
+
+# Set XDG-compliant Zsh configuration root.
+export ZDOTDIR="${XDG_CONFIG_HOME:-$HOME/.config}/zsh"
+
+# Source the login profile even in non-login Zsh sessions to establish a base
+# environment. This is particularly useful when the system login shell is not
+# Zsh. Check $SHLVL to avoid duplicate sourcing in nested Zsh instances.
+if [[ ("$SHLVL" -eq 1 && ! -o login) && -s "$ZDOTDIR/.zprofile" ]]; then
+  . "$ZDOTDIR/.zprofile"
+fi
+
+# Pre-initialization of z4x for an interactive Zsh session.
+[[ -o interactive ]] && . "$ZDOTDIR/z4x.zsh" || return
+
+# vim:ft=zsh

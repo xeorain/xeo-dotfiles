@@ -1,0 +1,38 @@
+# SPDX-License-Identifier: MIT
+#
+# Copyright (c) 2026 Jerry Xeo
+#
+# Check the terminal background style (either 'dark' or 'light') via OSC 11
+# escape sequences.
+
+[[ -v _z4x_tty_fd ]] || return
+
+local old_stty
+old_stty="$(stty -g <&$_z4x_tty_fd)"
+stty raw -echo min 0 time 0 <&$_z4x_tty_fd || return
+
+# Clean out any leftover junk from the stream.
+local junk
+while read -r -t 0.001 junk <&$_z4x_tty_fd; do done
+
+# Send OSC 11 query
+print -nu $_z4x_tty_fd '\e]11;?\a'
+
+local char resp
+local stime="$EPOCHREALTIME"
+
+while (( EPOCHREALTIME - stime < 0.01 )); do
+  if read -r -t 0.001 -k 1 char <&$_z4x_tty_fd; then
+    resp+="$char"
+    # * Terminals like foot uses BEL (Bell, ASCII 07) as response terminator.
+    # * Terminals like kitty uses ST (String Terminator), i.e. Esc (ASCII 27)
+    #   followed by \ (ASCII 92), as response terminator.
+    [[ "$resp" == *$'\a' ||  "$resp" == *$'\e\\' ]] && break
+  fi
+done
+
+stty "$old_stty" <&$_z4x_tty_fd
+
+[[ "$resp" =~ "rgb:[cdef]" ]] && print -n 'light' || print -n 'dark'
+
+# vim:ft=zsh

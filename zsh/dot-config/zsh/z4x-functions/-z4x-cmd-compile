@@ -1,0 +1,26 @@
+# SPDX-License-Identifier: MIT
+#
+# Copyright (c) 2020 Roman Perepelitsa
+#
+# The public z4x interface used to compile Zsh script source files into .zwc
+# format.
+#
+# Compilation is done by invoking the `-z4x-compile` function. File names are
+# not allowed to start with a hyphen.
+#
+# Usage:
+#   See -z4x-help-compile
+
+# NOTE: Using double-dash (--) style to signify "no options defined" for
+# `zparseopts` is supported starting from Zsh 5.8, while the older versions
+# require an empty argument. Here the second call to `zparseopts` serves as a
+# fallback for backward-compatibility.
+zparseopts -D -F -- 2>/dev/null || zparseopts -D -F '' || return '_z4x_err()'
+emulate zsh -o extended_glob -c 'local files=(${^@}(N))'
+local file
+builtin set --
+for file in "${files[@]}"; do
+  -z4x-compile "$file"
+done
+
+# vim:ft=zsh

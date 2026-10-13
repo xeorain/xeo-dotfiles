@@ -1,0 +1,55 @@
+#!/bin/bash
+# SPDX-License-Identifier: MIT
+#
+# Copyright (c) 2026 Jerry Xeo
+#
+# Adjust screen brightness, optionally showing the current level in a
+# notification.
+#
+# Usage: brightness-helper <ACTION>
+#
+# Arguments:
+#   ACTION  The action to take, accepting:
+#           - minus    decrease brightness by 1%
+#           - minus10  decrease brightness by 10%
+#           - plus     increase brightness by 1%
+#           - plus10   increase brightness by 10%
+#           - max      set brightness to 100%
+#           - min      set brightness to 0%
+#
+# Requires:     brightnessctl (>= 0.5.1-11)
+# Recommends:   wob
+
+command -v brightnessctl >/dev/null || exit 1
+
+case "$1" in
+  'minus')
+    brightnessctl -q set '1%-'
+    ;;
+  'minus10')
+    brightnessctl -q set '10%-'
+    ;;
+  'plus')
+    brightnessctl -q set '+1%'
+    ;;
+  'plus10')
+    brightnessctl -q set '+10%'
+    ;;
+  'max')
+    brightnessctl -q set '100%'
+    ;;
+  'min')
+    brightnessctl -q set '0%'
+    ;;
+esac
+
+lvl="$(brightnessctl --percentage get)"
+
+# Use `notify-send` to display brightness level (use `wob` instead)
+# command -v notify-send >/dev/null \
+#   && notify-send -e \
+#                  --hint string:x-canonical-private-synchronous:brightness \
+#                  --hint "int:value:${lvl}" -t 800 "Brightness:: ${lvl}%"
+
+# Use `wob` to show brightness level
+printf '%s brightness\n' "${lvl}" >"${XDG_RUNTIME_DIR:-/tmp}/wob-${EUID}-${XDG_SESSION_ID:-$(cat /proc/self/sessionid)}.fifo"

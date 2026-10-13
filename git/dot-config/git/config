@@ -1,0 +1,129 @@
+# User configuration for Git.
+#
+# See /usr/share/doc/git/git-config.html for a complete reference.
+#
+# Copyright (c) 2026 Jerry Xeo
+
+[filter "lfs"]
+    clean = git-lfs clean -- %f
+    smudge = git-lfs smudge -- %f
+    process = git-lfs filter-process
+    required = true
+
+[color]
+    ui = auto
+
+[i18n]
+    logOutputEncoding = utf-8
+    commitEncoding = utf-8
+
+[alias]
+    amend = commit --amend --no-edit
+    br = branch
+    co = checkout
+    c = commit --short
+    ci = commit
+    dump = cat-file -p
+    fixup = commit --fixup
+    l = log --graph --pretty=format:'%C(red)%h%C(reset) -%C(yellow)%d%C(reset) %s %C(green)%ad %C(bold blue)<%an>'  --date=short
+    la = log --graph --pretty=format:'%C(red)%h%C(reset) -%C(yellow)%d%C(reset) %s %C(green)%ad %C(bold blue)<%an>' --abbrev-commit --date=relative --all
+    p = push
+    pf = push --force-with-lease
+    s = status -sb
+    sm = submodule
+    st = status
+    sw = switch
+    type = cat-file -t
+    uncommit = reset --soft HEAD^
+    unstage = reset HEAD --
+
+[core]
+    autocrlf = input
+    ; safecrlf = true
+    editor = nvim
+    pager = delta
+    # Treat whitespace issues as errors
+    whitespace = trailing-space,space-before-tab
+
+[interactive]
+    diffFilter = delta --color-only
+
+# delta theme
+[include]
+    path = ~/.config/delta/current-theme.gitconfig
+
+[delta]
+    navigate = true
+    line-numbers = true
+    side-by-side = false
+    features = decorations
+
+[delta "decorations"]
+    commit-decoration-style = bold yellow box ul
+    file-style = bold yellow ul
+    file-decoration-style = none
+
+[merge]
+    conflictstyle = zdiff3
+    tool = nvimdiff
+
+[diff]
+    algorithm = histogram
+    colorMoved = default
+    tool = nvimdiff
+    # Better submodule diffs
+    submodule = log
+
+[difftool]
+    prompt = false
+
+[mergetool]
+    prompt = false
+    keepBackup = false
+
+[pull]
+    rebase = true
+
+[push]
+    default = current
+    ; autoSetupRemote = true
+
+[fetch]
+    prune = true
+    pruneTag = true
+
+[rebase]
+    autoStash = true
+    autoSquash = true
+    updateRefs = true
+
+[rerere]
+    enabled = true
+
+[init]
+    defaultBranch = main
+
+[commit]
+    gpgSign = true
+    verbose = true
+
+[tag]
+    # Signed tags are always annotated tags; unset tag.gpgSign to allow
+    # lightweight tags. Run `git tag -s` whenever a signature is needed for a
+    # tag.
+    ; gpgSign = true
+
+[gpg]
+    # Use a GPG helper to handle multiple Git accounts.
+    program = ~/.local/libexec/git/git-gpg-helper.sh
+
+[credential]
+    helper = cache --timeout=3600
+
+[help]
+    autocorrect = prompt
+
+[log]
+    date = auto:human
+
+# vim:ft=gitconfig

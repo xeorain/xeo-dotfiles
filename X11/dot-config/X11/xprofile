@@ -1,0 +1,38 @@
+# User configuration for X11 session.
+#
+# Copyright (c) 2026 Jerry Xeo
+
+[ "${XDG_SESSION_TYPE:-}" = 'x11' ] || return
+
+: "${XDG_CONFIG_HOME:="${HOME}"/.config}"
+
+# Directory for additional xfonts.
+#xset +fp "${HOME}/.local/share/fonts/x11/misc"
+
+# Merge Xresources.
+[ -s "${XDG_CONFIG_HOME}/X11/Xresources" ] \
+  && xrdb -merge "${XDG_CONFIG_HOME}/X11/Xresources"
+
+# GTK+
+export GTK2_RC_FILES="${XDG_CONFIG_HOME}/gtk-2.0/gtkrc"
+
+### Qt
+export QT_QPA_PLATFORM=xcb
+export QT_QPA_PLATFORMTHEME=qt5ct
+#export QT_AUTO_SCREEN_SCALE_FACTOR=0
+#export QT_SCALE_FACTOR=1
+# Suppress qt5ct and qt6ct debug messages.
+export QT_LOGGING_RULES='qt5c5.debug=false;qt6ct.debug=false'
+
+### IME
+export XMODIFIERS=@im=fcitx
+export GTK_IM_MODULE=fcitx
+export QT_IM_MODULE=fcitx
+# Some GPU-accelerated terminal emulators (e.g., kitty) use GLFW IM module that
+# only supports the IBus protocol. Fcitx5 users also need to set GLFW_IM_MODULE
+# to 'ibus' to use the Fcitx5 IBus interface layer (shim) which allows Fcitx5 to
+# be masqueraded as IBus. Note that Legacy Fcitx is not supported in such
+# terminal emulators due to missing iBus shim.
+export GLFW_IM_MODULE=ibus
+
+# vim:ft=sh:foldmethod=marker:foldlevel=0

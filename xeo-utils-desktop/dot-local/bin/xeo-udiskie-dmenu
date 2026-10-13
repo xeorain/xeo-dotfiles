@@ -1,0 +1,284 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+#
+# Copyright (c) 2026 Jerry Xeo
+
+"""A udiskie wrapper for mounting/unmounting removable devices.
+
+Mounts/unmounts removable disks using `udiskie` and `dmenu` or other application
+launchers supporting dmenu mode, including `bemenu`, `fuzzel`, `rofi`, `wmenu` and
+`wofi`.
+
+`rofi` (>= 2.0) or `rofi-wayland` is recommended as it supports complex match mode
+(e.g., regex), multiple selection, and work with both X11 and Wayland.
+
+Requires:
+  udiskie, bemenu/dmenu/fuzzel/rofi/wmenu/wofi
+
+Recommends:
+  libnotify
+"""
+
+import os
+import re
+import shutil
+import subprocess as sp
+import sys
+
+PROG = os.path.basename(sys.argv[0])
+
+
+def die(msg, rc=1):
+    print(f"\033[1m{PROG}:\033[0m \033[1;31merror:\033[0m {msg}", file=sys.stderr)
+    sys.exit(rc)
+
+
+def notify(msg, prog=PROG, dur="3300"):
+    sp.run(["notify-send", "-u", "low", "-t", dur, prog, msg], check=False)
+
+
+def fetch_device_info():
+    """Fetches information of all removable devices from udiskie.
+
+    Delimiter and parsing strategy:
+
+    1. Why use `\x1f` (ASCII Unit separator) instead of `\x00` (Null Byte) as the
+       field delimiter in `udiskie-info` output:
+       - Python's `subprocess.check_output()` and the underline Linux `execve` system
+         call rely on null-terminated C-strings to pass command arguments.
+       - Passing a raw '\x00' inside the argument to the `-o` option causes
+         `udiskie-info` to fail immediately with "ValueError: embedded null byte".
+       - '\x1f' is non-zero, non-printable ASCII control character that crosses the
+         process fork safely while remaining valid inside user-defined storage device
+         labels (`{ui_label}`) or system file paths (`{mount_path}`), thus ensuring 100%
+         safety against delimiter injection bugs.
+    2. Why prefer direct delimiter-based splitting over JSON parsing:
+       - Speed and efficiency: `line.split('\x1f')` utilizes hardware-accelerated
+         memory block scanning (`memchar` at the compiled C instruction layer), which
+         slices a string into a list in microseconds with minimal CPU overhead.
+       - Simplicity: It avoids the overhead of parsing character brackets, matching
+         quotes, handling escape transitions, and spinning up an entire JSON state
+         machine engine for every individual line block.
+
+    Returns:
+        A dict mapping device paths to their associated metadata records.
+    """
+    try:
+        raw_info = sp.check_output(
+            [
+                "udiskie-info",
+                "-C",
+                "-a",
+                "-o",
+                "{ui_label}\x1f{is_luks}\x1f{mount_path}",
+            ],
+        )
+    except sp.CalledProcessError:
+        die("failed to run command 'udiskie-info'")
+    except FileNotFoundError:
+        die("command 'udiskie-info' not found")
+
+    device_info = {}
+
+    for line in raw_info.splitlines():
+        if not line:
+            continue
+
+        tokens = line.split(b"\x1f")
+        if len(tokens) != 3:
+            continue
+
+        ui_label, is_luks, mount_path = [t.decode("utf-8").strip() for t in tokens]
+
+        if ": " in ui_label:
+            dev_path, label = ui_label.split(": ", 1)
+        else:
+            dev_path, label = ui_label, ""
+
+        dev_path = dev_path.strip()
+        if dev_path.startswith("/dev/loop"):
+            continue
+
+        is_luks = is_luks == "True"
+
+        if dev_path in device_info:
+            data = device_info[dev_path]
+            if data["mount_path"] and not mount_path:
+                continue
+            if data["is_luks"] and not is_luks:
+                continue
+
+        device_info[dev_path] = {
+            "label": label,
+            "is_luks": is_luks,
+            "mount_path": mount_path,
+        }
+
+    return device_info
+
+
+def build_menu_input(device_info):
+    """Generates padded multi-column lines for the menu launcher display.
+
+    Args:
+        device_info: A dict containing the parsed metadata of removable devices.
+
+    Returns:
+        A multi-line string formatted as menu input.
+    """
+    lines = []
+    for dev_path, data in device_info.items():
+        # Fall back to user label if the device is not mounted.
+        display_title = data["mount_path"] if data["mount_path"] else data["label"]
+        lines.append(f"{dev_path:<9}: {display_title}")
+    return "\n".join(lines) + "\n"
+
+
+def get_selection(launcher_cmd, menu_input):
+    """Spawns a child process to run the application launcher for user to select
+    devices.
+
+    Args:
+        launcher_cmd: A sequence of strings representing the full launcher command.
+        menu_input: A multi-line string of devices displayed in the menu.
+
+    Returns:
+        A tuple containing a multi-line string of user selections, and the exit code of
+        spawned launcher process.
+    """
+    res = sp.run(
+        launcher_cmd, capture_output=True, check=False, input=menu_input, text=True
+    )
+    return res.stdout.strip(), res.returncode
+
+
+def validate_selection(dev_path, dev_paths):
+    """Validates a device path.
+
+    A device path is valid if it matches an explicit partition layer pattern or
+    represents a standalone raw parent disk with zero sub-partitions.
+
+    Args:
+        dev_path: A string representing the path to the selected removable device.
+        dev_paths: A sequence of strings containing the paths of all removable devices
+          tracked by udiskie.
+
+    Returns:
+        True the device path is valid, False otherwise.
+    """
+    if re.match(r"^/dev/sd[a-z][0-9]+$", dev_path, re.IGNORECASE):
+        return True
+
+    for p in dev_paths:
+        if p != dev_path and p.startswith(dev_path):
+            return False
+
+    return True
+
+
+def do_action(dev_path, dev_data, detach=False):
+    """Mounts or unmounts a removable device via udiskie.
+
+    Args:
+        dev_path: A string representing the path to the selected device.
+        dev_data: A dict containing the metadata records of the selected device.
+        detach: If True only hardware-detaching flag will be passed down to smart drive
+          ejections.
+    """
+    cmd = []
+    is_luks_drive, mnt_point = dev_data["is_luks"], dev_data["mount_path"]
+
+    if mnt_point:
+        cmd.append("udiskie-umount")
+        if detach:
+            cmd.append("--detach")
+        if is_luks_drive:
+            cmd.append("--force")
+        cmd.append(mnt_point)
+    else:
+        cmd.append("udiskie-mount")
+        if detach:
+            cmd.append("--detach")
+        if is_luks_drive:
+            cmd.append("--recursive")
+        cmd.append(dev_path)
+
+    try:
+        sp.run(cmd, check=True)
+    except sp.CalledProcessError:
+        notify(f"Failed to {'unmounted' if mnt_point else 'mounted'} {dev_path}")
+    else:
+        notify(f"{dev_path} {'unmounted' if mnt_point else 'mounted'}")
+
+
+def parse_args():
+    """Parses command line arguments to construct the launcher command.
+
+    This function determines the application launcher by either reading the
+    XEO_UDISKIE_LAUNCHER environment variable (which takes precedence) or inspecting the
+    program name in `sysv.args[0]`. The latter allows a symlink, e.g.,
+    "xeo-udiskie-rofi" pointing to `xeo-udiskie-dmenu`, to specify `rofi` as the
+    application launcher.
+
+    Returns:
+        A sequence of strings representing the full launcher command.
+    """
+    launcher_envvar = os.environ.get("XEO_UDISKIE_LAUNCHER")
+    launcher = launcher_envvar if launcher_envvar else PROG.split("-")[-1]
+    if not shutil.which(launcher):
+        die(
+            f"application launcher '{launcher}' not found\n"
+            f"Try creating a symlink xeo-udiskie-<launcher> to {PROG}, "
+            "where <launhcer> is the name of the expected launcher, e.g., 'rofi'."
+        )
+
+    launcher_cmd = [launcher, "-p", f"[{PROG}]"]
+
+    if launcher == "rofi":
+        launcher_cmd.extend(
+            ("-dmenu", "-i", "-matching", "regex", "-no-custom", "-multi-select")
+        )
+    elif launcher == "fuzzel":
+        launcher_cmd.extend(("--dmenu", "-i", "--match-mode", "fzf"))
+    elif launcher == "wofi":
+        launcher_cmd.extend(("--dmenu", "-i", "--matching", "multi-contains"))
+    elif launcher in ("bemenu", "dmenu", "wmenu"):
+        launcher_cmd.extend(("-i", ))
+    else:
+        die(f"unsupported application launcher '{launcher}'")
+    launcher_cmd.extend(sys.argv[1:])
+
+    return launcher_cmd
+
+
+def main():
+    """Main entry point executing the end-to-end device processing loop."""
+    launcher_cmd = parse_args()
+
+    device_info = fetch_device_info()
+
+    if not device_info:
+        notify("No removable device found")
+        sys.exit(0)
+
+    menu_input = build_menu_input(device_info)
+    sels, rc = get_selection(launcher_cmd, menu_input)
+
+    if rc != 0 and rc != 10:
+        sys.exit(rc)
+    detach = rc == 10
+
+    dev_paths = device_info.keys()
+    for line in sels.splitlines():
+        if not line:
+            continue
+
+        dev_path = line.split(":")[0].strip()
+        if not dev_path or dev_path not in device_info:
+            continue
+
+        if validate_selection(dev_path, dev_paths):
+            do_action(dev_path, device_info[dev_path], detach=detach)
+
+
+main()

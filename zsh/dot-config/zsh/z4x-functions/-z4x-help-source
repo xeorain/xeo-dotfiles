@@ -1,0 +1,44 @@
+# SPDX-License-Identifier: MIT
+#
+# Copyright (c) 2020 Roman Perepelitsa
+# Copyright (c) 2026 Jerry Xeo
+#
+# Print command help for `z4x source` (`-z4x-cmd-source`).
+
+eval "$_z4x_opt"
+
+print -Pr -- "$(<<\END
+%F{4}Usage:%f %F{2}z4x%f %Bsource%b [-c|--compile] [--] [<file>]...
+
+Source the specified Zsh files, skipping over inexisting ones.
+If %B-c%b or %B--compile%b is specified, files are automatically compiled with
+%F{2}zcompile%f to speed up subsequent sourcing, which boosts Zsh startup.
+
+Relative file names are resolved from %U$ZDOTDIR/%u, e.g., the command below
+sources %U$ZDOTIDIR/plugins/ohmyzsh/lib/diagnostics.zsh%u:
+
+  %F{2}z4x%f %Bsource%b plugins/ohmyzsh/lib/diagnostics.zsh
+
+Exit code of %F{2}z4x%f %Bsource%b is that of the last sourced file. Inexisting
+files do not affect exit code.
+
+Compilation isn't enabled by default because it has one negative side effect.
+Namely, aliases defined within a sourced file are not expanded in that same
+file. For example:
+
+  %% %F{2}cat%f %U~/config.zsh%u
+
+    %F{2}alias%f echo=%F{3}'echo hello'%f
+    %F{2}echo%f world
+
+  %% ( %F{2}z4x%f source %U~/config.zsh%u )
+
+    hello world
+
+  %% ( %F{2}z4x%f source -c %U~/config.zsh%u )
+
+    world
+END
+)"
+
+# vim:ft=zsh

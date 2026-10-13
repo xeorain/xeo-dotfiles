@@ -1,0 +1,12 @@
+#!/bin/sh
+# SPDX-License-Identifier: MIT
+#
+# A dispatcher for xeo utilities.
+#
+# Copyright (c) 2026 Jerry Xeo
+
+[ $# -gt 0 ] || exit 1
+
+prog="xeo-$1"
+shift
+exec "${HOME}/.local/libexec/xeo-utils-extra/${prog}" "$@"

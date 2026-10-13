@@ -1,0 +1,22 @@
+# Color definitions used to generate LSCOLORS for the BSD ls command.
+#
+# Copyright (c) 2026 Jerry Xeo
+#
+# The libexec/gen-bsd-lscolors script is the dedicated tool for producing the
+# LSCOLORS environment variable from this file.
+#
+# Format: key=fg_ansi_num[:bg_ansi_num]
+
+di=4
+ln=6
+so=5
+pi=3:0
+ex=2
+bd=3:0
+cd=3:0
+su=7:1
+sg=0:3
+tw=0:2
+ow=4:2
+
+# vim:ft=conf
