@@ -106,7 +106,7 @@ block = "custom"
 format = " $text.pango-str() |"
 interval = "once"
 command = '''
-if /bin/kill -0 -- "$(cat "${XDG_RUNTIME_DIR:-/tmp}/xeo-screenrec-wlr-${EUID:-$(id -u)}-${XDG_SESSION_ID:-$(cat /proc/self/sessionid)}.pid")" >/dev/null 2>&1; then
+if /bin/kill -0 -- "$(cat "${XDG_RUNTIME_DIR:-/tmp}/xeo-gsr-wl-${EUID:-$(id -u)}-${XDG_SESSION_ID:-$(cat /proc/self/sessionid)}.pid")" >/dev/null 2>&1; then
   printf '<span fallback="true">󰄙</span>'
 else
   printf ''
