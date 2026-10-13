@@ -1,0 +1,35 @@
+#!/bin/bash
+# SPDX-License-Identifier: MIT
+#
+# Copyright (c) 2026 Jerry Xeo
+#
+# Check MPD playback status and construct the i3status-rs JSON input, which is
+# exclusively used in an i3status-rs custom music block.
+#
+# Requires:   mpc, mpc
+
+mpc_stat="$(mpc status 2>/dev/null)"
+
+if [ -z "${mpc_stat}" ]; then
+  printf '{}'
+  exit
+fi
+
+mapfile -t lines <<< "${mpc_stat}"
+song="${lines[0]}"
+read -r state _ <<< "${lines[1]}"
+
+case "${state}" in
+  '[playing]')
+    printf '{"icon": "", "state": "Info", "text": "%s"}' \
+      "<span fallback='true'></span> ${song}"
+    ;;
+  '[paused]')
+    printf '{"icon": "", "state": "Idle", "text": "%s"}' \
+      "<span fallback='true'></span> ${song}"
+    ;;
+  *)
+    printf '{"icon": "", "state": "Idle", "text": "%s"}' \
+      "<span fallback='true'></span>"
+    ;;
+esac
