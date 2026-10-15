@@ -1,9 +1,12 @@
 #!/bin/sh
-#
 # SPDX-License-Identifier: MIT
 #
 # Copyright (c) 2026 Jerry Xeo
 #
-# The pulic command-line interface for xeo utilities.
+# A dispatcher for xeo utilities.
 
-[ -n "${1:-}" ] && exec "${HOME}/.local/libexec/xeo-utils-extra/xeo-$1"
+[ $# -gt 0 ] || exit 1
+
+prog="xeo-$1"
+shift
+exec "${HOME}/.local/libexec/xeo-utils-extra/${prog}" "$@"
