@@ -119,6 +119,10 @@
 !/i3status-rust/dot-config/i3status-rust/config.toml
 !/i3status-rust/dot-config/i3status-rust/themes/
 !/i3status-rust/dot-config/i3status-rust/themes/*.toml
+!/i3status-rust/dot-local/
+!/i3status-rust/dot-local/libexec/
+!/i3status-rust/dot-local/libexec/i3status-rust/
+!/i3status-rust/dot-local/libexec/i3status-rust/*
 
 !/kanshi/
 !/kanshi/dot-config/

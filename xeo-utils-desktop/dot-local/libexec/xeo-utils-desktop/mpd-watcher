@@ -1,0 +1,85 @@
+#!/bin/bash
+# SPDX-License-Identifier: MIT
+#
+# Copyright (c) 2026 Jerry Xeo
+#
+# Monitor MPD status and signal a status bar.
+#
+# If MPD is not running, `mpc idle` returns immediately instead of blocking,
+# which creates an infinite tight loop that would hog the CPU. Hence, always run
+# this script along with MPD.
+#
+# Usage: mpd-watcher [-l|--lock] <BAR_COMMAND>
+#
+# Options:
+#   -l, --lock  Use a lock file to ensure singleton. Do not use it when running
+#               this script as a systemd service.
+#
+# Arguments:
+#   BAR_COMMAND  The command (including command argumentss) used to signal the
+#                status bar
+#
+# Requires:   mpd, mpc
+
+case "$1" in
+  -l|--lock)
+    use_lockfile=1
+    shift
+    ;;
+  --*)
+    printf "invalid option -- '%s'" "${1#--}" >&2
+    exit 2
+    ;;
+  -*)
+    printf "invalid option -- '%s'" "${1#-}" >&2
+    exit 2
+    ;;
+esac
+
+cmd_bar_signal=("$@")
+
+if [ -n "${use_lockfile}" ]; then
+  lockfile="${XDG_RUNTIME_DIR:-/tmp}/mpd-watcher-${EUID}-${XDG_SESSION_ID:-$(< /proc/self/sessionid)}.lock"
+  exec 9>"${lockfile}"
+  if ! flock -n 9; then
+    printf "mpd-watcher: only a single instance is allowed" >&2
+    exit
+  fi
+fi
+
+on_exit() {
+  local _rc=$?
+  trap - EXIT INT TERM
+
+  # shellcheck disable=SC2086
+  [ -z "${mpc_pid}" ] || kill ${mpc_pid} 2>/dev/null
+  if [ -n "${lockfile}" ] && [ -f "${lockfile}" ]; then
+    exec 9>&- && rm -f "${lockfile}" || _rc=$?
+  fi
+
+  "${cmd_bar_signal[@]}"
+
+  case "${_rc}" in
+    130)
+      kill -s SIGINT $$ 2>/dev/null
+      ;;
+    143)
+      kill -s SIGTERM $$ 2>/dev/null
+      ;;
+    *)
+      exit "${_rc}"
+  esac
+}
+
+trap 'on_exit' EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+while true; do
+  # signal status bar
+  "${cmd_bar_signal[@]}"
+
+  mpc idle player playlist >/dev/null 2>&1 </dev/null &
+  mpc_pid="$!"
+  wait "${mpc_pid}" 2>/dev/null
+done

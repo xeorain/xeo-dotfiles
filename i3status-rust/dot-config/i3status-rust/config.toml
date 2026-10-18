@@ -49,11 +49,47 @@ idle_fg = "#fafafa"
 ### Music status ###
 #
 # Requires:   mpd, mpdris2-rs (or mpdris2)
+#[[block]]
+#block = "music"
+#format = " $icon $combo.str(max_w:40,rot_interval:0.5) |"
+#player = "mpd"
+#signal = 4
+#[block.theme_overrides]
+#info_bg = "#005577" # dark cyan
+#info_fg = "#eeeeee"
+
+### Custom music block ###
+# Use this custom block as the built-in music block doesn't distinguish between
+# "paused" and "stopped" states.
+#
+# Mouse Operations:
+#   - Left-click to toggle play/pause
+#   - Right-click to stop playback
+#   - Wheel up to seek forward
+#   - Wheel down to seek backward
+#
+# Requires:   mpd, mpc, ~/.local/libexec/i3status-rust/check-mpd-status
 [[block]]
-block = "music"
-format = " $icon $combo.str(max_w:40,rot_interval:0.5) |"
-player = "mpd"
+block = "custom"
+format = ' $text.pango-str() |'
+interval = "once"
+command = "~/.local/libexec/i3status-rust/check-mpd-status"
+if_command = "test -x ~/.local/libexec/i3status-rust/check-mpd-status"
+json = true
+hide_when_empty = true
 signal = 4
+[[block.click]]
+button = "left"
+cmd = "mpc toggle"
+[[block.click]]
+button = "right"
+cmd = "mpc stop"
+[[block.click]]
+button = "up"
+cmd = "mpc seek +1"
+[[block.click]]
+button = "down"
+cmd = "mpc seek -1"
 [block.theme_overrides]
 info_bg = "#005577" # dark cyan
 info_fg = "#eeeeee"
