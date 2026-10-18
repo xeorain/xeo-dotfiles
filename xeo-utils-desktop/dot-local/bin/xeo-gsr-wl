@@ -1,0 +1,418 @@
+#!/bin/bash
+# SPDX-License-Identifier: MIT
+#
+# Copyright (c) 2026 Jerry Xeo
+#
+# A wrapper script using `gpu-screen-recorder` to record screen, with optional
+# audio, in Wayland enviornments.
+#
+# Requires:     gpu-screen-recorder, slurp, rofi (>= 2.0) or rofi-wayland
+# Recommends:   libnotify
+
+# Prevent the script from being sourced.
+[[ "${BASH_SOURCE[0]}" = "$0" ]] || exit
+
+set -uo pipefail
+shopt -u expand_aliases
+
+XEO_GSR_WL_PROG="$(basename -- "$0")"
+XEO_GSR_WL_VER='0.1.0'
+XEO_GSR_WL_PIDFILE="${XDG_RUNTIME_DIR:-/tmp}/${XEO_GSR_WL_PROG}-${EUID}-${XDG_SESSION_ID:-$(cat /proc/self/sessionid)}.pid"
+readonly XEO_GSR_WL_PROG XEO_GSR_WL_VER XEO_GSR_WL_PIDFILE
+
+print_hint() {
+  printf "Try '%s --help' for more information\n" "${XEO_GSR_WL_PROG}"
+}
+
+print_version() {
+  printf "%s version %s\n" "${XEO_GSR_WL_PROG}" "${XEO_GSR_WL_VER}"
+}
+
+say() {
+  printf '%s: %s\n' "${XEO_GSR_WL_PROG}" "$1"
+}
+
+die() {
+  say "$1" >&2
+  exit "${2:-1}"
+}
+
+die_with_hint() {
+  say "$1" >&2
+  print_hint >&2
+  exit "${2:-1}"
+}
+
+check_cmd() {
+  command -v "$1" >/dev/null 2>&1
+}
+
+need_cmd() {
+  check_cmd "$1" || die "cannot find command '$1'"
+}
+
+notify() {
+  check_cmd notify-send \
+    && notify-send -r 666 -t 3300 -u low -a "${XEO_GSR_WL_PROG}" "${XEO_GSR_WL_PROG}" "$1"
+}
+
+precheck() {
+  need_cmd gpu-screen-recorder
+  need_cmd rofi
+  need_cmd slurp
+}
+
+ensure_singleton() {
+  local _pid
+  if [ -f "${XEO_GSR_WL_PIDFILE}" ]; then
+      _pid="$(cat "${XEO_GSR_WL_PIDFILE}")"
+      if [ -n "${_pid:-}" ] && kill -0 "${_pid}" 2>/dev/null; then
+        die "another '${XEO_GSR_WL_PROG}' instance is already running"
+      else
+        rm -f "${XEO_GSR_WL_PIDFILE}"
+      fi
+  fi
+}
+
+validate_video_codec() {
+  case "$1" in
+    auto|h264|hevc|av1|vp8|vp9|hevc_hdr|av1_hdr|hevc_10bit|av1_10bit|h264_vulkan|hevc_vulkan|hevc_10bit_vulkan|av1_vulkan|av1_hdr_vulkan|av1_10bit_vulkan)
+    return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+validate_video_quality() {
+  case "$1" in
+    medium|high|very_high|ultra)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+validate_video_resolution() {
+  [[ "$1" =~ ^[[:digit:]]{1,4}x[[:digit:]]{1,4}$ ]]
+}
+
+select_disp_output() {
+  local _outlist
+  _outlist="$(gpu-screen-recorder --list-monitors | cut -d'|' -f1)"
+  [ -n "${_outlist:-}" ] || return 1
+
+  if [ "$(wc -l <<<"${_outlist}")" = 1 ]; then
+    geom="${_outlist}"
+  else
+    geom="$(rofi -dmenu \
+                 -p "[${XEO_GSR_WL_PROG}] choose a display output" \
+                 -theme-str 'listview{fixed-height:false;}' <<<"${_outlist}")"
+  fi
+  [ -n "${geom:-}" ] || return 1
+  gsr_args+=('-w' "${geom}")
+}
+
+select_rect_region() {
+  geom="$(slurp)"
+  [ -n "${geom:-}" ] || return 1
+  gsr_args+=('-w' 'region' '-region' "${geom}")
+}
+
+select_audio_source() {
+  declare -A _srcs # an associative array!
+  local _src _alias
+
+  while IFS='|' read -r _src _alias; do
+    [ "${_src}" = 'default_output' ] || [ "${_src}" = 'default_input' ] && continue
+    _srcs["${_alias}"]="${_src}"
+  done < <(gpu-screen-recorder --list-audio-devices)
+  [ ${#_srcs[@]} -gt 0 ] || return 1
+
+  if [ ${#_srcs[@]} -eq 1 ]; then # single source
+    aud_src="${_srcs[${!_srcs[@]}]}"
+  else
+    _alias="$(printf '%s\n' "${!_srcs[@]}" \
+      | rofi -dmenu \
+             -p "[${XEO_GSR_WL_PROG}] choose audio source" \
+             -theme-str 'listview{fixed-height:false;}')"
+    [ -n "${_alias:-}" ] || return 1
+    aud_src="${_srcs["${_alias}"]}"
+  fi
+
+  gsr_args+=('-a' "${aud_src}")
+}
+
+validate_audio_source() {
+  gpu-screen-recorder --list-audio-devices | cut -d'|' -f1 | grep -q "^$1"
+}
+
+set_geometry() {
+  [[ "$1" =~ ^[0-9]+x[0-9]+\+[0-9]+\+[0-9]+$ ]] || return 1
+  geom="$1"
+  gsr_args+=('-w' 'region' '-region' "$1")
+}
+
+set_disp_output() {
+  gpu-screen-recorder --list-monitors | grep -q -m1 "^$1|" || return 1
+  geom="$1"
+  gsr_args+=('-w' "$1")
+}
+
+run_recorder() {
+  gsr_args+=(
+    '-c' "${fmt}"
+    '-f' "${fps}"
+    '-k' "${codec}"
+    '-q' "${quality}"
+    '-s' "${scale}"
+    '-o' "${outfile}"
+  )
+  gpu-screen-recorder "${gsr_args[@]}" &
+  gsr_pid=$!
+  [ -n "${gsr_pid:-}" ] || return 1
+  printf '%s' "${gsr_pid}" >"${XEO_GSR_WL_PIDFILE}" || return $?
+}
+
+confirm() {
+  local _input=$'Yes\nNo'
+  local _confirm
+  _confirm="$(rofi -dmenu \
+                   -p "[${XEO_GSR_WL_PROG}] start recording?" \
+                   -theme-str 'listview{lines:2;}' <<<"${_input}")"
+  [ "${_confirm:-}" = 'Yes' ] || return 1
+}
+
+make_outfile() {
+  local _xdg_vid_dir _outdir
+  _xdg_vid_dir="$(xdg-user-dir VIDEOS)"
+  if [ "${_xdg_vid_dir:-${HOME}}" = "${HOME}" ]; then
+    _outdir="${HOME}/Videos/Screencasts"
+  else
+    _outdir="${_xdg_vid_dir}/Screencasts"
+  fi
+  [ -d "${_outdir}" ] || mkdir -p "${_outdir}" || return $?
+  outfile="${_outdir}/screencast-$(date +%Y%m%d-%H%M%S).${fmt}"
+}
+
+on_exit() {
+  local _rc=$?
+  trap - EXIT INT TERM
+
+  if [ -n "${gsr_pid:-}" ]; then
+    kill "${gsr_pid}" 2>/dev/null
+    [ -z "${QUIET:-}" ] && notify "Stopped on ${geom}${aud_src:+\n + ${aud_src}}"
+  fi
+  if [ -f "${XEO_GSR_WL_PIDFILE}" ]; then
+    rm -f "${XEO_GSR_WL_PIDFILE}"
+  fi
+
+  exit "${_rc}"
+}
+
+usage() {
+  cat <<EOF
+Usage: ${XEO_GSR_WL_PROG} [OPTION]... [<FILE>]
+Record screen and optional audio in Wayland environments.
+
+Arguments:
+  <FILE>
+      write recording to <FILE> or a timestamped file name in
+      "\$XDG_VIDEOS_DIR/Screencasts" if not specified. If <FILE> is -, write
+      recording to the standard output
+
+Options:
+      --codec=CODEC
+          set video encoding to CODEC (default: hevc). See the
+          'gpu-screen-recorder' manual for the list of supported codecs. Note
+          that the actual codec support depends on the capabilities of GPUs and
+          the graphics drivers.
+      --quality=QUALITY
+          set video quality to QUALITY which must be one of medium (default),
+          high, very_high, ultra
+  -f, --format=FORMAT
+          set video container format to FORMAT which must be either mp4
+          (default) or mkv
+      --fps=FPS
+          set video frames per second to FPS which must be either 30 (default)
+          or 60
+  -q, --quiet
+          disable notification
+  -s, --scale=WxH
+          scale captured content to fit within WxH resolution while keeping its
+          aspect ratio; if not specified or specified as 0x0 (default), the
+          physical (original) resolution of the display output is used
+  -t, --target=TARGET
+          set a TARGET to record; see supported target formats below
+      --with-audio[=AUDIO_SRC]
+          include audio; if AUDIO_SRC is not specified, prompt the user to
+          choose one
+      --help
+          print this help and exit
+  -V, --version
+          output version information and exit
+
+The TARGET argument can be any of the following:
+  io            select a display output (default if --target not present)
+  ig            select an arbitrary rectangular region
+  o=<OUTPUT>    specify the display output to OUTPUT
+  g=<GEOMETRY>  specify the gemoetry of a rectangular region in form of
+                'WxH+X+Y', where X and Y are the horizontal and vertical pixel
+                coordinates of the top-left corner of the region respectively,
+                W and H are the width and height of the region respectively
+EOF
+}
+
+main() {
+  local _args
+  if ! _args=$(getopt --options f:qs:t:V \
+      --longoptions codec:,format:,fps:,quality:,scale:,help,quiet,target:,version,with-audio:: \
+      --name "${XEO_GSR_WL_PROG}" -- "$@"); then
+    print_hint >&2
+    exit 1
+  fi
+  eval set -- "${_args}"
+  unset _args
+
+  while true; do
+    case "$1" in
+      --codec)
+        validate_video_codec "$2" || die_with_hint "invalid $1 argument '$2'"
+        codec="$2"
+        shift
+        ;;
+      -f|--format)
+        case "$2" in
+          mp4|mkv)
+            fmt="$2"
+            ;;
+          *)
+            die_with_hint "unsupported format '$2'"
+            ;;
+        esac
+        shift
+        ;;
+      --fps)
+        case "$2" in
+          30|60)
+            fps="$2"
+            ;;
+          *)
+            die_with_hint "unsupported FPS '$2'"
+            ;;
+        esac
+        shift
+        ;;
+      --quality)
+        validate_video_quality "$2" || die_with_hint "invalid $1 argument '$2'"
+        quality="$2"
+        shift
+        ;;
+      -q|--quiet)
+        readonly QUIET=1
+        ;;
+      -s|--scale)
+        validate_video_resolution "$2" || die_with_hint "invalid $1 argument '$2'"
+        scale="$2"
+        shift
+        ;;
+      -t|--target)
+        case "$2" in
+          ig|io)
+            tgt="$2"
+            ;;
+          g=*) # direct geometry
+            set_geometry "${2#g=}" \
+              || die_with_hint "invalid geometry form '${2#g=}'"
+            tgt='g='
+            ;;
+          o=*) # direct display output
+            set_disp_output "${2#o=}" \
+              || die_with_hint "invalid display output '${2#g=}'"
+            tgt='o='
+            ;;
+          *)
+            die_with_hint "invalid $1 argument '$2'"
+            ;;
+        esac
+        shift
+        ;;
+      --with-audio)
+        readonly WITH_AUD=1
+        if [ -n "${2:-}" ]; then
+          validate_audio_source "$2" || die "invalid audio source '$2'"
+          aud_src="$2"
+          shift
+        fi
+        ;;
+      --help)
+        usage
+        exit 0
+        ;;
+      -V|--version)
+        print_version
+        exit 0
+        ;;
+      --)
+        shift
+        break
+        ;;
+    esac
+    shift
+  done
+
+  precheck
+  ensure_singleton
+
+  if [ -n "${WITH_AUD:-}" ] && [ -z "${aud_src:-}" ]; then
+    select_audio_source || exit $?
+  fi
+
+  if [ -z "${geom:-}" ]; then
+    case "${tgt:-io}" in
+      ig)
+        select_rect_region || exit $?
+        ;;
+      io)
+        select_disp_output || exit $?
+        ;;
+    esac
+  fi
+
+  confirm || exit $?
+
+  case "${1:-}" in
+    '')
+      make_outfile || exit $?
+      ;;
+    -)
+      outfile='/dev/stdout'
+      ;;
+    *)
+      outfile="$1"
+      ;;
+  esac
+
+  [ -z "${QUIET:-}" ] && notify "Started on ${geom}${aud_src:+\n + ${aud_src}}"
+
+  trap 'on_exit' EXIT
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
+
+  run_recorder || exit $?
+  wait "${gsr_pid}" 2>/dev/null
+}
+
+codec='hevc'
+fmt='mp4'
+fps=30
+quality='medium'
+scale='0x0'
+# Supply `-v no` option to suppress FPS and damage info, preventing these
+# messages from flooding the terminal.
+gsr_args=('-v' 'no')
+
+main "$@"

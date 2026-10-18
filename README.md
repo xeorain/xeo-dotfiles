@@ -207,9 +207,12 @@ Installed via distro package manager:
 - Fedora
 
   ```
-  dunst, jq, kanshi, lxqt-policykit, mpd, mpc, satty sway, swaybg, swayidle,
-  swaylock, udiskie, wf-recorder, wiremix
+  dunst, gpu-screen-recorder, jq, kanshi, lxqt-policykit, mpd, mpc, satty sway,
+  swaybg, swayidle, swaylock, udiskie, wiremix
   ```
+
+  The `gpu-screen-recorder` package is provided by the COPR repo:
+  [brycensranch/gpu-screen-recorder-git](https://copr.fedorainfracloud.org/coprs/brycensranch/gpu-screen-recorder-git/)
 
   The `satty` package is provided by the COPR repo:
   [mineiro/satty](https://copr.fedorainfracloud.org/coprs/mineiro/satty)
@@ -217,15 +220,18 @@ Installed via distro package manager:
 - Debian/Ubuntu
 
   ```
-  dunst, jq, kanshi, lxqt-policykit, mpd, mpc, sway, swaybg, swayidle, swaylock,
-  udiskie, wf-recorder
+  dunst, gpu-screen-recorder,jq, kanshi, lxqt-policykit, mpd, mpc, sway, swaybg,
+  swayidle, swaylock, udiskie
   ```
+
+  The `gpu-screen-recorder` package is provided by the third-party
+  [deb.griffo.io] repository.
 
 - Arch Linux
 
   ```
-  dunst, jq, kanshi, lxqt-policykit, mpd, mpc, satty, sway, swaybg, swayidle,
-  swaylock, udiskie, wf-recorder, wiremix
+  dunst, gpu-screen-recorder, jq, kanshi, lxqt-policykit, mpd, mpc, satty, sway,
+  swaybg, swayidle, swaylock, udiskie, wiremix
   ```
 
 ### Dependencies for swayimg dotfiles
@@ -259,25 +265,32 @@ Installed via distro package manager:
 - Fedora
 
   ```
-  brightnessctl (>= 0.5.1-11), grim, jq mpd, mpc, pipewire-pulseaudio,
-  pipewire-utils, pulseaudio-utils, rofi (>= 2.0) or rofi-wayland, slurp,
-  udiskie, wayland-utils, wf-recorder, wl-clipboard, wlr-randr, wireplumber, wob
+  brightnessctl (>= 0.5.1-11), gpu-screen-recorder, grim, jq mpd, mpc,
+  pipewire-pulseaudio, pipewire-utils, pulseaudio-utils, rofi (>= 2.0) or
+  rofi-wayland, slurp, udiskie, wayland-utils, wl-clipboard, wlr-randr,
+  wireplumber, wob
   ```
+
+  See [Dependencies for Sway dotfiles](#dependencies-for-sway-dotfiles) for how
+  to get `gpu-screen-recorder` in Fedora.
 
 - Debian/Ubuntu
 
   ```
-  brightnessctl (>= 0.5.1-11), grim, jq, mpd, mpc, pipewire-pulse,
-  pipewire-utils, pulseaudio-utils, rofi (>= 2.0), slurp, udiskie,
-  wayland-utils, wf-recorder, wl-clipboard, wlr-randr, wireplumber, wob
+  brightnessctl (>= 0.5.1-11), gpu-screen-recorder, grim, jq, mpd, mpc,
+  pipewire-pulse, pipewire-utils, pulseaudio-utils, rofi (>= 2.0), slurp,
+  udiskie, wayland-utils, wl-clipboard, wlr-randr, wireplumber, wob
   ```
+
+  See [Dependencies for Sway dotfiles](#dependencies-for-sway-dotfiles) for how
+  to get `gpu-screen-recorder` in Debian or Ubuntu.
 
 - Arch Linux
 
   ```
-  brightnessctl (>= 0.5.1-11), grim, jq, mpd, mpc, pipewire-pulse,
-  pipewire-utils, libpulse, rofi (>= 2.0) or rofi-wayland, slurp, udiskie,
-  wayland-utils, wf-recorder, wl-clipboard, wlr-randr, wireplumber, wob
+  brightnessctl (>= 0.5.1-11), gpu-screen-recorder, grim, jq, mpd, mpc,
+  pipewire-pulse, pipewire-utils, libpulse, rofi (>= 2.0) or rofi-wayland,
+  slurp, udiskie, wayland-utils, wl-clipboard, wlr-randr, wireplumber, wob
   ```
 
 ### Dependencies for xeo-utils-extra dotfiles
@@ -319,6 +332,7 @@ Third-party plugins as Git submodules:
 [bbolt]: https://github.com/etcd-io/bbolt#getting-started
 [cliphist]: https://github.com/xeorain/cliphist
 [Ghostty]: https://ghostty.org/
+[gpu-screen-recorder]: https://git.dec05eba.com/gpu-screen-recorder
 [i3status-rust]: https://github.com/greshake/i3status-rust
 [kitty]: https://sw.kovidgoyal.net/kitty/
 [mpdris2-rs]: https://github.com/szclsya/mpdris2-rs
@@ -327,3 +341,4 @@ Third-party plugins as Git submodules:
 [stow]: https://www.gnu.org/software/stow/
 [swayimg]: https://github.com/artemsen/swayimg
 [wiremix]: https://crates.io/crates/wiremix
+[deb.griffo.io]: https://deb.griffo.io/

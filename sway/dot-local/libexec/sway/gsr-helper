@@ -1,0 +1,258 @@
+#!/bin/bash
+# SPDX-License-Identifier: MIT
+#
+# Copyright (c) 2026 Jerry Xeo
+#
+# A helper script that launches `xeo-gsr-wl` (a wrapper for
+# `gpu-screen-recorder`) in Sway.
+#
+# Usage: screen-gsr-helper [OPTION]... <TARGET>
+#
+# Options:
+#   -b BAR  set the name of status bar to BAR
+#   -s SIG  set the signal number to SIG
+#
+# Arguments:
+#   TARGET  ao  the currently focused display output
+#           aw  the currently focused window
+#           ig  select a rectangle region
+#           io  select a display output
+#           iw  select a window
+#
+# Requires:   jq, slurp, sway, xeo-gsr-wl
+
+bar_signal_cmd="${HOME}/.local/libexec/xeo-utils-desktop/bar-signal"
+
+command -v xeo-gsr-wl >/dev/null 2>&1 \
+  && [ -x "${bar_signal_cmd}" ] \
+  || exit 1
+
+# Ensure singleton
+main_pid=$$
+pidfile="${XDG_RUNTIME_DIR:-/tmp}/sway-$(basename -- "$0")-${EUID}-${XDG_SESSION_ID:-$(cat /proc/self/sessionid)}.pid"
+if [ -f "${pidfile}" ]; then
+  pid="$(cat "${pidfile}")"
+  [ -n "${pid:-}" ] && kill -0 "${pid}" >/dev/null 2>&1 && exit
+  unset pid
+fi
+printf '%s' "${main_pid}" > "${pidfile}"
+
+on_exit() {
+  trap - EXIT
+  [ -n "${need_signal_bar:-}" ] && "${bar_signal_cmd}" "${bar}" "${sig}"
+  rm -f "${pidfile}"
+}
+
+trap 'on_exit' EXIT
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -b)
+      bar="${2:-}"
+      shift
+      ;;
+    -s)
+      sig="${2:-}"
+      shift
+      ;;
+    *)
+      break
+      ;;
+  esac
+  shift
+done
+[ -n "${bar:-}" ] && [ -n "${sig:-}" ] && need_signal_bar=1
+
+tgt="${1:-}"
+set --
+
+case "${tgt}" in
+  ao)
+    output="$(swaymsg -t get_outputs | jq -r '.[] | select(.focused).name')"
+    [ -n "${output:-}" ] || exit 1
+    set -- '-t' "o=${output}"
+    ;;
+  aw)
+    # NOTE: Defer getting focused window until the helper script window is moved
+    # to the scratchpad.
+    readonly tgt_is_aw=1
+    ;;
+  ig)
+    set -- '-t' 'ig'
+    ;;
+  io)
+    set -- '-t' 'io'
+    ;;
+  iw)
+    geom="$(swaymsg -t get_tree \
+      | jq -r '.. | select(.pid? and .visible?) | .rect | "\(.x),\(.y) \(.width)x\(.height)"' \
+      | slurp -f '%wx%h+%x+%y')"
+    [ -n "${geom:-}" ] || exit
+    set -- '-t' "g=${geom}"
+    ;;
+  *)
+    exit 1
+esac
+
+codec='hevc'
+fmt='mp4'
+fps=30
+quality='medium'
+scale='1920x1080'
+
+printf 'Include audio? (N/y): '
+read -r choice
+
+if [ -n "${choice:-}" ]; then
+  case "${choice}" in
+    y|Y)
+      set -- "$@" '--with-audio'
+      ;;
+  esac
+  printf '\n'
+fi
+
+printf 'Choose video codec:
+1) hevc (default)
+2) hevc_hdr
+3) hevc_10bit
+4) hevc_vulkan
+5) hevc_10bit_vulkan
+6) h264
+7) h264_vulkan
+'
+read -r choice
+
+if [ -n "${choice:-}" ]; then
+  case "${choice:-}" in
+    2)
+      codec='hevc_hdr'
+      ;;
+    3)
+      codec='hevc_10bit'
+      ;;
+    4)
+      codec='hevc_vulkan'
+      ;;
+    5)
+      codec='hevc_10bit_vulkan'
+      ;;
+    6)
+      codec='h264'
+      ;;
+    7)
+      codec='h264_vulkan'
+      ;;
+  esac
+  printf '\n'
+fi
+
+printf 'Choose video container format:
+1) mp4 (default)
+2) mkv
+'
+read -r choice
+
+if [ -n "${choice:-}" ]; then
+  case "${choice}" in
+    2)
+      fmt='mkv'
+      ;;
+  esac
+  printf '\n'
+fi
+
+printf 'Choose video resolution:
+1) 1280x720  (720p, 16:9)
+2) 1920x1280 (1080p, 16:9, default)
+3) 2560×1440 (2k, 16:9)
+4) 3840x2160 (4k, 16:9)
+'
+read -r choice
+
+if [ -n "${choice:-}" ]; then
+  case "${choice}" in
+    1)
+      scale='1280x720'
+      ;;
+    3)
+      scale='2560x1440'
+      ;;
+    4)
+      scale='3840x2160'
+      ;;
+  esac
+  printf '\n'
+fi
+
+printf 'Choose fps:
+1) 30 (default)
+2) 60
+'
+read -r choice
+
+if [ -n "${choice:-}" ]; then
+  case "${choice:-}" in
+    2)
+      fps=60
+      ;;
+  esac
+  printf '\n'
+fi
+
+printf 'Choose video quality:
+1) medium (default)
+2) high
+3) very_high
+4) ultra
+'
+read -r choice
+
+if [ -n "${choice:-}" ]; then
+  case "${choice:-}" in
+    2)
+      quality='high'
+      ;;
+    3)
+      quality='very_high'
+      ;;
+    4)
+      quality='ultra'
+      ;;
+  esac
+  printf '\n'
+fi
+
+printf 'Set output file (press Enter for auto generation): \n'
+read -r outfile
+
+# Hide the terminal window where this script is running.
+swaymsg 'move scratchpad'
+
+if [ -n "${tgt_is_aw:-}" ]; then
+  geom="$(swaymsg -t get_tree \
+    | jq -r 'recurse(.nodes[]?, .floating_nodes[]?) | select(.focused) | .rect | "\(.width)x\(.height)+\(.x)+\(.y)"')"
+  [ -n "${geom:-}" ] || exit 1
+  set -- '-t' "g=${geom}" "$@"
+fi
+
+set -- "$@" "--codec=${codec}" "--format=${fmt}" "--fps=${fps}" \
+  "--quality=${quality}" "--scale=${scale}" "${outfile:-}"
+
+if [ -n "${need_signal_bar:-}" ]; then
+  # The recorder wrapper script (xeo-gsr-wl) may interact with the user, which
+  # could take some time. We spawn a subshell to wait until the actual recorder
+  # process (`gpu-screen-recorder` in this case) is running. The user may cancel
+  # this helper script before the recorder starts, so we need to kill the
+  # subshell if the parent is cancelled.
+  (
+    while ! pgrep -u "${EUID}" -f '^gpu-screen-recorder( |$)' >/dev/null; do
+      # Exit the subshell when the main script exits
+      kill -0 ${main_pid} 2>/dev/null || exit 0
+      sleep 0.2
+    done
+    "${bar_signal_cmd}" "${bar}" "${sig}"
+  ) &
+fi
+
+xeo-gsr-wl "$@"
