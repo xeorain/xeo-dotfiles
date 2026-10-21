@@ -28,12 +28,12 @@
     {
         "key": "WHEEL_UP",
         "command": ["script-binding", "file_browser/dynamic/scroll_up"],
-        "flags": { "repeat": true }
+        "flags": { "repeatable": true }
     },
     {
         "key": "WHEEL_DOWN",
         "command": ["script-binding", "file_browser/dynamic/scroll_down"],
-        "flags": { "repeat": true }
+        "flags": { "repeatable": true }
     },
     {
         "key": "MBTN_LEFT",
@@ -51,12 +51,12 @@
     {
         "key": "k",
         "command": ["script-binding", "file_browser/dynamic/scroll_up"],
-        "flags": { "repeat": true }
+        "flags": { "repeatable": true }
     },
     {
         "key": "j",
         "command": ["script-binding", "file_browser/dynamic/scroll_down"],
-        "flags": { "repeat": true }
+        "flags": { "repeatable": true }
     },
     {
         "key": "l",
