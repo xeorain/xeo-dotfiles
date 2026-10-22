@@ -4,6 +4,11 @@
 
 python-downloads = "manual"
 
+# Use symlink mode for package installation to save disk space.
+# NOTE: Some packages (e.g., zensical) doesn't support symlink mode.
+# Use `uv tool install <pkg> --link-mode=clone` to install such packages.
+link-mode = "symlink"
+
 [[index]]
 url = "https://mirrors.aliyun.com/pypi/simple"
 default = true
