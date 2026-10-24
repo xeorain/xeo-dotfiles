@@ -18,7 +18,8 @@
 case "${OSTYPE}" in
   darwin*)
     asid="$(id -A | awk -F'=' '/^asid/ {print $2}')"
-    XEO_SH_EXTRA_ENV_FILE="$(getconf DARWIN_USER_TEMP_DIR)/xeo-sh-extra-env-${EUID:-$(id -u)}-${asid}"
+    # NOTE: The output of `getconf DARWIN_USER_TEMP_DIR` contains a trailing slash.
+    XEO_SH_EXTRA_ENV_FILE="$(getconf DARWIN_USER_TEMP_DIR)xeo-sh-extra-env-${EUID:-$(id -u)}-${asid}"
     unset asid
     ;;
   linux*)
