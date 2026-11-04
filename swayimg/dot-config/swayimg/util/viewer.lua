@@ -21,19 +21,28 @@ function M.delete()
 	if not p then
 		return
 	end
-
 	local choice = p:read("*a")
 	p:close()
 	choice = choice:match("^%s*(.-)%s*$")
-	if choice == "yes" then
-		os.remove(img.path)
-		os.execute(string.format("notify-send -t 1100 -u low -r 3301 'swayimg' 'Deleted %s'", img.path))
-    if not IS_V5_0 then
-      swayimg.viewer.reload()
-    else
-      swayimg.viewer.switch_image("next")
-    end
+	if choice ~= "yes" then
+		return
 	end
+
+	if not os.remove(img.path) then
+		os.execute(string.format("notify-send -t 1100 -u low -r 3301 'swayimg' 'Failed to remove %s'", img.path))
+		return
+	end
+	-- NOTE: swayimg.imagelist.size is only available since swayimg v5.5
+	local num_items = swayimg.imagelist.size or #swayimg.imagelist.get()
+	if num_items > 1 then
+		if not IS_V5_0 then
+			swayimg.viewer.open("next")
+		else
+			swayimg.viewer.switch_image("next")
+		end
+	end
+	swayimg.imagelist.remove(img.path)
+	os.execute(string.format("notify-send -t 1100 -u low -r 3301 'swayimg' 'Removed %s'", img.path))
 end
 
 function M.rename()
@@ -46,26 +55,30 @@ function M.rename()
 	if not p then
 		return
 	end
-
-	local name = p:read("*a")
+	local new_name = p:read("*a"):gsub("\n$", "") or ""
 	p:close()
-	name = name:match("^(.-)\n$")
-
-	if name ~= "" then
-		local dir = img.path.match("^(.*/)") or "."
-		local newpath = dir .. name
-		local ok = os.rename(img.path, newpath)
-		if ok then
-			os.execute(string.format("notify-send -t 1100 -u low -r 3301 'swayimg' 'Renamed to %s'", name))
-      if not IS_V5_0 then
-        swayimg.viewer.reload()
-      else
-        swayimg.viewer.switch_image("next")
-      end
-		else
-			os.execute("notify-send -t 1100 -u low -r 3301 'swayimg' 'Renam failed'")
-		end
+	if new_name == "" then
+		return
 	end
+
+	local dir, old_name = img.path:match("^(.+/)([^/]+)$")
+	if not dir then
+		dir = "."
+	end
+	local newpath = dir .. new_name
+	if not os.rename(img.path, newpath) then
+		os.execute(string.format("notify-send -t 1100 -u low -r 3301 'swayimg' 'Failed to rename %s'", old_name))
+		return
+	end
+
+	-- NOTE: swayimg.imagelist.size is only available since swayimg v5.5
+	local num_items = swayimg.imagelist.size or #swayimg.imagelist.get()
+	if num_items > 1 then
+		swayimg.imagelist.add(newpath)
+		swayimg.imagelist.remove(img.path)
+	end
+	swayimg.viewer.open_path(newpath)
+	os.execute(string.format("notify-send -t 1100 -u low -r 3301 'swayimg' 'Renamed to %s'", new_name))
 end
 
 function M.qrscan()
