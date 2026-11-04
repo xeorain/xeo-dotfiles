@@ -1,0 +1,35 @@
+#!/bin/bash
+# SPDX-License-Identifier: MIT
+#
+# Copyright (c) 2026 Jerry Xeo
+#
+# A xeo utility script that sets an image as wallpaper.
+#
+# Requires:   swaybg (for wlroots-based Wayland compositors) or
+#             xwallpaper (for X11)
+
+[[ -f "${1:-}" ]] || exit
+
+case "$1" in
+  /*)
+    img_abspath="$1"
+    ;;
+  *)
+    img_abspath="${PWD}/$1"
+    ;;
+esac
+
+WALLPAPER_PATH="${XDG_DATA_HOME:-${HOME}/.local/share}/wallpaper"
+
+ln -sf "${img_abspath}" "${WALLPAPER_PATH}" || exit $?
+
+if [[ "${XDG_SESSION_TYPE}" == 'wayland' ]]; then
+  if pgrep -u "${EUID:-$(id -u)}" -x sway >/dev/null 2>&1; then # sway
+    killall swaybg
+    swaymsg "output * bg \"${WALLPAPER_PATH}\" fill"
+  elif systemctl --user is-active --quiet swaybg.service; then # other wlroots compositors
+    systemctl --user restart swaybg.service 2>/dev/null
+  fi
+elif [[ "${XDG_SESSION_TYPE}" == 'x11' ]]; then
+  xwallpaper --zoom "${WALLPAPER_PATH}"
+fi

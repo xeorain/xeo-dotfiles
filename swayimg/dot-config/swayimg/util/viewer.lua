@@ -6,7 +6,8 @@
 --
 -- Requires:    ImageMagick, libnotify, rofi (>= 2.0) or rofi-wayland,
 --              qrtool (https://github.com/sorairolake/qrtool),
---              xeo-setwallpaper
+--              ~/.local/bin/xeo-util,
+--              ~/.local/libexec/xeo-utils-extra/xeo-set-wallpaper
 
 local M = {}
 
@@ -88,7 +89,7 @@ function M.set_wallpaper()
 
 	local fpath = "'" .. img.path:gsub("'", "'\\''") .. "'"
 	local fname = img.path:match("([^/]+)$") or img.path
-	local ok, _, _ = os.execute(string.format("~/.local/bin/xeo-setwallpaper", fpath))
+	local ok, _, _ = os.execute(string.format("~/.local/bin/xeo-util set-wallpaper '%s'", fpath))
 	if ok then
 		os.execute(string.format("notify-send -r 107 -u low 'swayimg' '%s is set as wallpaper'", fname))
 	end
