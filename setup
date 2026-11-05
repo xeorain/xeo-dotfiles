@@ -1601,7 +1601,7 @@ main() {
       shift
       local _commit='WORKTREE'
       local _snapdir="${DOTFILES_SNAPSHOT_DIR}"
-      while getopts ':c:d:' _opt; do
+      while getopts ':c:d:h' _opt; do
         case "${_opt}" in
           c)
             _commit="${OPTARG}"
@@ -1611,6 +1611,10 @@ main() {
             if [[ "$(realpath -m -- "${_snapdir}")" != "${HOME}"/* ]]; then
               die_with_hint 'snapshot directory outside user home'
             fi
+            ;;
+          h)
+            usage
+            exit 0
             ;;
           :)
             die_with_hint "option '${OPTARG}' requires an argument"
