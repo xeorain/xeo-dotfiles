@@ -228,17 +228,26 @@ uptime = ""
 # Disk usage
 [[block]]
 block = "disk_space"
-backend = "btrfs"
 path = "/"
 info_type = "used"
-alert_unit = "GB"
 interval = 60
-warning = 100.0
-alert = 50.0
+warning = 80.0
+alert = 90.0
 format = " $icon {$percentage.eng(w:1) |}"
 merge_with_next = true
 [block.icons_overrides]
-disk_drive = ""
+disk_drive = "󰐆"
+
+[[block]]
+block = "disk_space"
+path = "/home"
+info_type = "used"
+interval = 60
+warning = 80.0
+alert = 90.0
+format = " $icon {$percentage.eng(w:1) |}"
+[block.icons_overrides]
+disk_drive = ""
 
 # Memory usage
 [[block]]
