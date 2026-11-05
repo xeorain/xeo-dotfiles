@@ -132,7 +132,8 @@ readonly PKG_CHECKLIST_STOW=(
 )
 readonly PKG_CHECKLIST_UNSTOW=(
   'bash' 'bat' 'delta' 'foot' 'ghostty' 'gnupg' 'go' 'i3status-rust' 'npm' 'pip'
-  'readline' 'shell' 'systemd' 'uv' 'xeo-utils-desktop' 'zsh'
+  'readline' 'shell' 'systemd' 'uv' 'xdg-desktop-portal' 'xeo-utils-desktop'
+  'zsh'
 )
 
 tgt_root="${HOME}"
@@ -608,6 +609,8 @@ preproc_for_stow() {
             || _missing+=$'\t''xeo-utils-desktop'
           [[ "${_joined_pkgs}" == *$'\n'i3status-rust$'\n'* ]] \
             || _missing+=$'\t''i3status-rust'
+          [[ "${_joined_pkgs}" == *$'\n'xdg-desktop-portal$'\n'* ]] \
+            || _missing+=$'\t''xdg-desktop-portal'
           [[ "${_missing}" == 'sway' ]] || missing_pkgs+=("${_missing}")
           ;;
         systemd)
@@ -830,6 +833,10 @@ preproc_for_unstow() {
           ;;
         delta|foot)
           unlink_pkg_current_themes "${_p}" || return $?
+          ;;
+        xdg-desktop-portal)
+          [[ "${_joined_pkgs}" == *$'\n'sway$'\n'* ]] \
+            || recommended_pkgs+=('xeo-desktop-portal'$'\t''sway')
           ;;
       esac
     fi

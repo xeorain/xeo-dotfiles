@@ -296,6 +296,11 @@
 !/wob/dot-config/wob/
 !/wob/dot-config/wob/wob.ini
 
+!/xdg-desktop-portal/
+!/xdg-desktop-portal/dot-config/
+!/xdg-desktop-portal/dot-config/xdg-desktop-portal/
+!/xdg-desktop-portal/dot-config/xdg-desktop-portal/sway-portal.conf
+
 !/xeo-utils-desktop/
 !/xeo-utils-desktop/dot-local/
 !/xeo-utils-desktop/dot-local/bin/
