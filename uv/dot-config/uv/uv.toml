@@ -4,10 +4,17 @@
 
 python-downloads = "manual"
 
-# Use symlink mode for package installation to save disk space.
-# NOTE: Some packages (e.g., zensical) doesn't support symlink mode.
-# Use `uv tool install <pkg> --link-mode=clone` to install such packages.
-link-mode = "symlink"
+# NOTE: On Linux and macOS, `link-mode` defaults to 'clone', which uses the
+# filesystem Copy-on-Write (CoW) cloning. However, if the underlying filesystem
+# does not support CoW, uv falls back to the 'copy' mode which physically
+# copies files from the global cache to the workspace, being slower and using
+# more disk space.
+# The 'hardlink' mode is the default on Windows, which creates hard links to
+# files in the global cache. We enforce it universally to prevent the automatic
+# fallback to the slow 'copy' mode.
+# The 'symlink' mode is discouraged by the uv official, as it tends to break
+# across multiple environments.
+link-mode = "hardlink"
 
 [[index]]
 url = "https://mirrors.aliyun.com/pypi/simple"
