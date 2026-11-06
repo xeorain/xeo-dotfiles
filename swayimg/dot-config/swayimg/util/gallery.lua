@@ -35,7 +35,7 @@ function M.delete()
 	-- NOTE: swayimg.imagelist.size is only available since swayimg v5.5
 	local num_items = swayimg.imagelist.size or #swayimg.imagelist.get()
 	if num_items > 1 then
-		if not IS_V5_0 then
+		if SWAYIMG_VERSION >= 5.5 then
 			swayimg.gallery.open("right")
 		else
 			swayimg.gallery.switch_image("right")

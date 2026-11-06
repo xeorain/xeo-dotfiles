@@ -9,9 +9,12 @@ require("v5_x.modes.slideshow.bindings")
 
 swayimg.slideshow.set_image_background(0xff111111)
 swayimg.slideshow.mark_color = 0xffffffff
+
 -- Disable auto-centering to allow manual panning
-swayimg.viewer.autopos = "free" -- v5.7
-swayimg.viewer.autocenter = false -- v5.5 ~ v5.6
-if swayimg.viewer.enable_centering then -- v5.1 ~ v5.4
+if SWAYIMG_VERSION >= 5.7 then
+	swayimg.viewer.autopos = "free" -- v5.7
+elseif SWAYIMG_VERSION >= 5.5 then
+	swayimg.viewer.autocenter = false -- v5.5 ~ v5.6
+else
 	swayimg.viewer.enable_centering(false)
 end
