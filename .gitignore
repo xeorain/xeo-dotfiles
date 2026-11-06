@@ -283,6 +283,8 @@
 !/systemd/dot-config/systemd/user/xeo-extra-env-cleanup.service
 !/systemd/dot-config/systemd/user/foot-server.service.d/
 !/systemd/dot-config/systemd/user/foot-server.service.d/*.conf
+!/systemd/dot-config/systemd/user/mpd.service.d/
+!/systemd/dot-config/systemd/user/mpd.service.d/*.conf
 !/systemd/dot-config/systemd/user/graphical-session.target.d/
 !/systemd/dot-config/systemd/user/graphical-session.target.d/*.conf
 
