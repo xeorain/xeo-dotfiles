@@ -37,13 +37,13 @@
 | `Shift`+`r`  | Rotate 90 degrees counter-clockwise |
 | `v`          | flip vertically                     |
 | `Shift`+`v`  | flip horizontally                   |
-| `i`          | zoom in 10%                         |
-| `o`          | zoom out 10%                        |
+| `Shift`+`=`  | zoom in 10%                         |
+| `-`          | zoom out 10%                        |
 | `w`          | scale current image to fit width    |
 | `e`          | scale current image to fit height   |
 | `f`          | scale current image to fill screen  |
-| `z`          | scale current image to fit screen   |
-| `Shift`+`z`  | reset the scale                     |
+| `=`          | scale current image to fit screen   |
+| `z`          | reset the position and scale        |
 | `Ctrl`+`d`   | Delete current image file           |
 | `Ctrl`+`r`   | Rename current image file           |
 | `Ctrl`+`s`   | Scan QR code from current image     |
@@ -81,13 +81,13 @@
 | `Shift`+`r`  | Rotate 90 degrees counter-clockwise |
 | `v`          | flip vertically                     |
 | `Shift`+`v`  | flip horizontally                   |
-| `i`          | zoom current image in by 10%        |
-| `o`          | zoom currente image out 10%         |
+| `Shift`+`=`  | zoom current image in by 10%        |
+| `-`          | zoom currente image out 10%         |
 | `w`          | scale current image to fit width    |
 | `e`          | scale current image to fit height   |
 | `f`          | scale current image to fill screen  |
-| `z`          | scale current image to fit screen   |
-| `Shift`+`z`  | reset the scale                     |
+| `=`          | scale current image to fit screen   |
+| `z`          | reset the position and scale        |
 | `Ctrl`+`d`   | Delete current image file           |
 | `Ctrl`+`r`   | Rename current image file           |
 | `Ctrl`+`s`   | Scan QR code from current image     |
@@ -115,8 +115,8 @@
 | `Right`     | Select right file                |
 | `n`         | Scroll down one page             |
 | `p`         | Scroll up one page               |
-| `i`         | zoom thumbnails in by 10 pixels  |
-| `o`         | zoom thumbnails out by 10 pixels |
+| `Shift`+`=` | zoom thumbnails in by 10 pixels  |
+| `-`         | zoom thumbnails out by 10 pixels |
 | `z`         | set thumbnail size to 200 pixels |
 | `Ctrl`+`d`  | Delete current image file        |
 | `Ctrl`+`r`  | Rename current image file        |

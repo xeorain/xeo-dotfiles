@@ -105,12 +105,12 @@ end)
 
 -- Zooming ====================================================================
 -- thumb +10
-swayimg.gallery.on_key("i", function()
+swayimg.gallery.on_key("Shift+plus", function()
 	local cursz = swayimg.gallery.get_thumb_size()
 	swayimg.gallery.set_thumb_size(cursz + 10)
 end)
 -- thumb -10
-swayimg.gallery.on_key("o", function()
+swayimg.gallery.on_key("minus", function()
 	local cursz = swayimg.gallery.get_thumb_size()
 	swayimg.gallery.set_thumb_size(cursz - 10)
 end)

@@ -90,11 +90,11 @@ end)
 
 -- Zooming ====================================================================
 -- thumb +10
-swayimg.gallery.on_key("i", function()
+swayimg.gallery.on_key("Shift+plus", function()
   swayimg.gallery.thumb_size = swayimg.gallery.thumb_size + 10
 end)
 -- thumb -10
-swayimg.gallery.on_key("o", function()
+swayimg.gallery.on_key("minus", function()
   swayimg.gallery.thumb_size = swayimg.gallery.thumb_size - 10
 end)
 swayimg.gallery.on_key("z", function()

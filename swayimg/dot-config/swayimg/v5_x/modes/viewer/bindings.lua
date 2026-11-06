@@ -166,12 +166,12 @@ end)
 
 -- Zooming ====================================================================
 -- zoom +10
-swayimg.viewer.on_key("i", function()
+swayimg.viewer.on_key("Shift+plus", function()
 	local scale = swayimg.viewer.scale
 	swayimg.viewer.set_abs_scale(scale + scale / 10)
 end)
 -- zoom -10
-swayimg.viewer.on_key("o", function()
+swayimg.viewer.on_key("minus", function()
 	local scale = swayimg.viewer.scale
 	swayimg.viewer.set_abs_scale(scale - scale /10)
 end)
@@ -188,11 +188,11 @@ swayimg.viewer.on_key("Shift+f", function()
   swayimg.viewer.set_fix_scale("fill")
 end)
 -- zoom fit
-swayimg.viewer.on_key("z", function()
+swayimg.viewer.on_key("equal", function()
   swayimg.viewer.set_fix_scale("fit")
 end)
 -- position and zoom reset
-swayimg.viewer.on_key("Shift+z", function()
+swayimg.viewer.on_key("z", function()
   swayimg.viewer.reset()
 end)
 

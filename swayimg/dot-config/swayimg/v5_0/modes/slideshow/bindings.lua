@@ -194,12 +194,12 @@ end)
 
 -- Zooming ====================================================================
 -- zoom +10
-swayimg.slideshow.on_key("i", function()
+swayimg.slideshow.on_key("Shift+plus", function()
 	local scale = swayimg.slideshow.get_scale()
 	swayimg.slideshow.set_abs_scale(scale + scale /10)
 end)
 -- zoom -10
-swayimg.slideshow.on_key("o", function()
+swayimg.slideshow.on_key("minus", function()
 	local scale = swayimg.slideshow.get_scale()
 	swayimg.slideshow.set_abs_scale(scale - scale / 10)
 end)
@@ -216,11 +216,11 @@ swayimg.slideshow.on_key("Shift+f", function()
   swayimg.slideshow.set_fix_scale("fill")
 end)
 -- zoom fit
-swayimg.slideshow.on_key("z", function()
+swayimg.slideshow.on_key("equal", function()
   swayimg.slideshow.reset()
 end)
 -- position and zoom reset
-swayimg.slideshow.on_key("Shift+z", function()
+swayimg.slideshow.on_key("z", function()
   swayimg.slideshow.reset()
 end)
 
