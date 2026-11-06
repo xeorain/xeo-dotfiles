@@ -9,3 +9,5 @@ require("v5_0.modes.slideshow.bindings")
 
 swayimg.slideshow.set_image_background(0xff111111)
 swayimg.slideshow.set_mark_color(0xffffffff)
+-- Disable auto-centering to allow manual panning
+swayimg.slideshow.enable_centering = false
