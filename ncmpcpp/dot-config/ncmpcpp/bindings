@@ -6,6 +6,9 @@ def_key "?"
   show_help
 
 # --- Playback ------------------------------------------------------------ {{{
+def_key "O"
+  load
+
 def_key "space"
   pause
 
@@ -161,7 +164,7 @@ def_key "H"
 # }}}
 
 # --- Screen -------------------------------------------------------------- {{{
-def_key "o"
+def_key ";"
   toggle_screen_lock
 
 def_key "ctrl-h"
