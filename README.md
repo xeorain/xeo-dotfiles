@@ -199,7 +199,7 @@ Installed manually:
 - [i3status-rust dotfiles](#dependencies-for-i3status-rust-dotfiles)
 - [autotiling-rs] (bspwm-style auto-tiling)
 - [mpdris2-rs]
-- [satty] and [wiremix] has to be manually installed by building source code on
+- [satty] and [wiremix] have to be manually installed by building source code on
   Debian or Ubuntu.
 
 Installed via distro package manager:
@@ -236,7 +236,7 @@ Installed via distro package manager:
 
 ### Dependencies for swayimg dotfiles
 
-Installed by distro package manager:
+Installed via distro package manager:
 
 ```
 swayimg (>= 5.0), wl-clipboard
@@ -312,8 +312,8 @@ utility script has the following _weak_ dependencies:
 Installed manually:
 
 - shell dotfiles
-- [xeo-utils-extra](dependencies-for-xeo-utils-extra-deotfiles) (optionally
-needed for some key bindings to work)
+- [xeo-utils-extra dotfiles](dependencies-for-xeo-utils-extra-deotfiles)
+  (optionally needed for some key bindings to work)
 
 Installed via distro package manager:
 
