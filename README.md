@@ -179,6 +179,14 @@ Installed via distro package manager:
   The `i3status-rust` is provided by the COPR repo:
   [atim/i3status-rust](https://copr.fedorainfracloud.org/coprs/atim/i3status-rust)
 
+  > [!NOTE]
+  > `golang-etcd-bbolt` is no longer available in Fedora 45, install Go (ensure
+  > `$GOBIN` is listed in `PATH`), and then build `bbolt` locally:
+  >
+  > ```sh
+  > go install go.etcd.io/bbolt/cmd/bbolt@latest
+  > ```
+
 - Debian/Ubuntu
 
   ```
@@ -215,7 +223,13 @@ Installed via distro package manager:
   [brycensranch/gpu-screen-recorder-git](https://copr.fedorainfracloud.org/coprs/brycensranch/gpu-screen-recorder-git/)
 
   The `satty` package is provided by the COPR repo:
-  [mineiro/satty](https://copr.fedorainfracloud.org/coprs/mineiro/satty)
+  [mineiro/satty](https://copr.fedorainfracloud.org/coprs/mineiro/satty) (not
+  applicable to Fedora 45)
+
+  > [!NOTE]
+  > For Fedora 45, download the pre-built binary from
+  > <https://github.com/Satty-org/Satty/releases> and install it manually.
+
 
 - Debian/Ubuntu
 
