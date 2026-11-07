@@ -242,9 +242,16 @@ Installed via distro package manager:
 swayimg (>= 5.0), wl-clipboard
 ```
 
-The Lua configuration only supports [swayimg] 5.0 or newer versions, so it would
-have to be built from source code if the package shipped in the Linux distro is
-older than version 5.0.
+> [!NOTE]
+> [Swayimg] 5.0 or newer versions is required to support Lua configuration,
+> which may not be available in old Linux distro releases. It has to be manually
+> compiled if necessary.
+
+Installed manually:
+
+- [qrtool] (optionally needed to scan QR code) has to be installed manually on
+  Fedora, Debian and Ubuntu (but available in Arch Linux and can be installed
+  via `pacman`).
 
 ### Dependencies for xeo-utils-desktop dotfiles
 
@@ -336,9 +343,10 @@ Third-party plugins as Git submodules:
 [i3status-rust]: https://github.com/greshake/i3status-rust
 [kitty]: https://sw.kovidgoyal.net/kitty/
 [mpdris2-rs]: https://github.com/szclsya/mpdris2-rs
+[qrtool]: https://github.com/sorairolake/qrtool
 [rofi-wayland]: https://github.com/lbonn/rofi
 [satty]: https://github.com/Satty-org/Satty
 [stow]: https://www.gnu.org/software/stow/
-[swayimg]: https://github.com/artemsen/swayimg
+[Swayimg]: https://github.com/artemsen/swayimg
 [wiremix]: https://crates.io/crates/wiremix
 [deb.griffo.io]: https://deb.griffo.io/
