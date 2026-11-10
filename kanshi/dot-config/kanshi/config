@@ -2,6 +2,6 @@
 #
 # Copyright (c) 2026 Jerry Xeo
 
-profile {
+profile xeorain-home {
   output "LG Electronics LG HDR 4K 0x0004BAF7" mode 3840x2160 position 0,0 scale 2.0
 }
