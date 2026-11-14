@@ -13,7 +13,6 @@ swayimg.text.set_foreground(0xffdddddd)
 swayimg.text.set_shadow(0xff222222)
 
 swayimg.set_mode("viewer")  -- default mode
-swayimg.imagelist.set_order("none")
 
 -- Register a callback to the window resize event
 swayimg.on_window_resize(function()
