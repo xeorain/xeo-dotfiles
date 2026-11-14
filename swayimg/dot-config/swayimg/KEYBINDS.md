@@ -25,14 +25,14 @@
 | `Shift`+`g`  | First file                          |
 | `Ctrl`+`n`   | Next directory                      |
 | `Ctrl`+`p`   | Previous directory                  |
-| `h`          | Move left by 10 pixels              |
-| `Left`       | Move left by 10 pixels              |
-| `j`          | Move down by 10 pixels              |
-| `Down`       | Move down by 10 pixels              |
-| `k`          | Move up by 10 pixels                |
-| `Up`         | Move up by 10 pixels                |
-| `l`          | Move right by 10 pixels             |
-| `Right`      | Move right by 10 pixels             |
+| `h`          | Pan left by 10 pixels               |
+| `Left`       | Pan left by 10 pixels               |
+| `j`          | Pan down by 10 pixels               |
+| `Down`       | Pan down by 10 pixels               |
+| `k`          | Pan up by 10 pixels                 |
+| `Up`         | Pan up by 10 pixels                 |
+| `l`          | Pan right by 10 pixels              |
+| `Right`      | Pan right by 10 pixels              |
 | `r`          | Rotate 90 degrees clockwise         |
 | `Shift`+`r`  | Rotate 90 degrees counter-clockwise |
 | `v`          | flip vertically                     |
@@ -69,14 +69,14 @@
 | `Shift`+`g`  | First file                          |
 | `Ctrl`+`n`   | Next directory                      |
 | `Ctrl`+`p`   | Previous directory                  |
-| `h`          | Move left by 10 pixels              |
-| `Left`       | Move left by 10 pixels              |
-| `j`          | Move down by 10 pixels              |
-| `Down`       | Move down by 10 pixels              |
-| `k`          | Move up by 10 pixels                |
-| `Up`         | Move up by 10 pixels                |
-| `l`          | Move right by 10 pixels             |
-| `Right`      | Move right by 10 pixels             |
+| `h`          | Pan left by 10 pixels               |
+| `Left`       | Pan left by 10 pixels               |
+| `j`          | Pan down by 10 pixels               |
+| `Down`       | Pan down by 10 pixels               |
+| `k`          | Pan up by 10 pixels                 |
+| `Up`         | Pan up by 10 pixels                 |
+| `l`          | Pan right by 10 pixels              |
+| `Right`      | Pan right by 10 pixels              |
 | `r`          | Rotate 90 degrees clockwise         |
 | `Shift`+`r`  | Rotate 90 degrees counter-clockwise |
 | `v`          | flip vertically                     |
